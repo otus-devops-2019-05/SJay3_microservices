@@ -114,3 +114,5 @@ docker rmi $(docker images -q)
 ### Обяснить отличия образа от контейнера (*)
 
 Необходимо сравнить вывод команды `docker inspect <container_id>` и `docker inspect <image_id>`. Записать объяснение чем отличается образ от контейнера в файл `docker-monolith/docker-1.log`
+
+
