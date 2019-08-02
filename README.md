@@ -8,6 +8,11 @@ SJay3 microservices repository
 - Установка докера
 - Основные команды докера
 - Обяснить отличия образа от контейнера (*)
+- Подготовка GCP
+- Работа с Docker-Machine
+- Создание структуры репозитория
+- Создание Dockerfile
+- Сборка и запуск контейнера
 
 ### Установка докера
 
@@ -114,5 +119,118 @@ docker rmi $(docker images -q)
 ### Обяснить отличия образа от контейнера (*)
 
 Необходимо сравнить вывод команды `docker inspect <container_id>` и `docker inspect <image_id>`. Записать объяснение чем отличается образ от контейнера в файл `docker-monolith/docker-1.log`
+
+### Подготовка GCP
+
+Необходимо подготовить GCP для нашего проекта с микросервисами.
+Создадим в GCP новый проект с название docker. Далее перейдем в web-интерфейсе в Compute Engine для того, что бы гугл инициализировал управление виртуальными машинами. Выполним команду инициализации gcloud:
+
+```shell
+# Заного инициализируем gcloud и выберем создание новой конфигурации, т.к. в конфигурации default у нас настроен проект infra
+gcloud init
+
+# назовем конфигурацию docker. Выберем созданный нами проект docker, а так же зададим дефолтную зону по умолчанию
+
+# Проверим, что конфигурация создалась с правильными параметрами
+gcloud config configurations list
+
+# Переключение между конфигурациями
+gcloud config configurations activate <имя конфигурации>
+
+```
+
+### Работа с Docker-Machine
+
+Docker-machine - это встроенный в докер механизм для создания хостов и установки на них docker engine (server).
+
+Команда создания - `docker-machine create <имя>`. Имен может быть много, переключение между ними через `eval $(docker-machine env <имя>)`. Переключение на локальный докер - `eval $(docker-machine env --unset)`. Удаление - `docker-machine rm <имя>`.
+docker-machine создает хост для докер демона со указываемым образом в `--googlemachine-image`, в ДЗ используется ubuntu-16.04. Образы которые используются для построения докер контейнеров к этому никак не относятся.
+Все докер команды, которые запускаются в той же консоли после `eval $(docker-machine env <имя>)` работают с удаленным докер демоном в GCP.
+
+#### Установка docker-machine
+
+[Ссылка на установку для Linux](https://docs.docker.com/machine/install-machine/)
+
+Для Windows и MacOS Docker-Machine идет в комплекте.
+
+#### Создание удаленного хоста с docker
+
+Выполним команду:
+
+```shell
+export GOOGLE_PROJECT=docker-248611
+docker-machine create --driver google \
+--google-machine-image https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1604-lts \
+--google-machine-type n1-standard-1 \
+--google-zone europe-west1-b \
+docker-host
+```
+
+Проверим, что наш хост успешно создан:
+
+```shell
+docker-machine ls
+```
+
+Переключимся на удаленный хост:
+
+```shell
+eval $(docker-machine env docker-host)
+```
+
+### Создание структуры репозитория
+
+В директории docker-monolith создадим 4 файла:
+- Dockerfile - описание нашего докер-образа
+- mongod.conf - подготовленный конфиг для mongo
+- db_config - файл с переменной окружения адреса БД
+- start.sh - файл запуска приложения
+
+### Создание Dockerfile
+
+Dockerfile всегда должен начинаться с инструкции FROM (единственная инструкция, которая может быть указана до FROM - это ARG)
+
+Запишем в докерфайл наш базовый образ, на котором будем строить свой:
+
+```Dockerfile
+FROM ubuntu:16.04
+```
+
+Далее напишем установку необходимых пакетов, ruby и mongo:
+
+```Dockerfile
+RUN apt-get update
+RUN apt-get install -y mongodb-server ruby-full ruby-dev build-essential git
+RUN gem install bundler
+```
+
+Скачаем наше приложение в контейнер:
+
+```Dockerfile
+RUN git clone -b monolith https://github.com/express42/reddit.git
+```
+
+Скопируем файлы конфигурации в контейнер:
+
+```Dockerfile
+COPY mongod.conf /etc/mongod.conf
+COPY db_config /reddit/db_config
+COPY start.sh /start.sh
+```
+
+Установим зависимости приложения и сделаем скрипт запуска выполняемым:
+
+```Dockerfile
+RUN cd /reddit && bundle install
+RUN chmod 0777 /start.sh
+```
+
+Добавим запуск сервиса при старте контейнера:
+
+```Dockerfile
+CMD ["/start.sh"]
+```
+
+### Сборка и запуск контейнера
 
 
