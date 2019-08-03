@@ -1,2 +1,9 @@
 micro.sublime-workspace
 micro.sublime-project
+
+variables.json
+.terraform/
+*.tfstate
+*.tfstate.*.backup
+*.tfstate.backup
+*.retry
