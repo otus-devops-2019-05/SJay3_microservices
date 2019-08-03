@@ -1,7 +1,7 @@
 ---
 # playbook for packer to install doocker to image
 - name: Packer provision docker
-  hosts: docker
+  hosts: all
   become: true
   roles:
     - docker
