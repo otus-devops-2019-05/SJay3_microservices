@@ -7,3 +7,5 @@ variables.json
 *.tfstate.*.backup
 *.tfstate.backup
 *.retry
+.vagrant/
+docker-monolith/infra/ansible/ubuntu-xenial-16.04-cloudimg-console.log
