@@ -19,4 +19,33 @@
 
 - name: Add docker repo
   apt_repository:
-    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_facts["ansible_distribution_release"] }} stable
+    filename: docker
+    state: present
+
+- name: Install docker
+  vars:
+    packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+  apt:
+    update_cache: yes
+    name: "{{ packages }}"
+    state: present
+
+- name: Add docker group
+  group:
+    name: docker
+    state: present
+
+- name: Add user to docker group
+  user:
+    name: {{ deploy_user }}
+    append: yes
+    groups: docker
+
+- name: Enable docker service
+  systemd:
+    name: docker
+    enabled: yes
