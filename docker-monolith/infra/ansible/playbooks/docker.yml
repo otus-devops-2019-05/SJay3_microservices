@@ -1,5 +1,5 @@
 ---
-#docker installation playbook
+# docker installation playbook
 - name: Install Docker
   hosts: docker
   become: true
