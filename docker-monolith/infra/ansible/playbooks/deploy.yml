@@ -1,0 +1,13 @@
+---
+# deploy application playbook
+- name: Deploy reddit application
+  hosts: docker
+  tasks:
+    - name: Start reddit docker container
+      docker_container:
+        name: reddit
+        image: sjotus/otus-reddit:1.0
+        published_ports: 9292:9292
+        auto_remove: yes
+        state: started
+        detach: yes

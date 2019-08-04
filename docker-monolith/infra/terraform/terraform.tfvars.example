@@ -1,0 +1,8 @@
+project = "Your project id"
+public_key_path = "~/.ssh/appuser.pub"
+privat_key_path = "~/.ssh/appuser"
+docker_disk_image = "docker-base"
+region = "europe-west1"
+zone = "europe-west1-b"
+machine_type = "g1-small"
+instance_count = "1"

@@ -1,0 +1,12 @@
+micro.sublime-workspace
+micro.sublime-project
+
+variables.json
+.terraform/
+*.tfstate
+*.tfstate.*.backup
+*.tfstate.backup
+*.tfvars
+*.retry
+.vagrant/
+docker-monolith/infra/ansible/ubuntu-xenial-16.04-cloudimg-console.log

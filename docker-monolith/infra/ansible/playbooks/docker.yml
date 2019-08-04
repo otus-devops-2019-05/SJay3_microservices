@@ -1,0 +1,7 @@
+---
+#docker installation playbook
+- name: Install Docker
+  hosts: docker
+  become: true
+  roles:
+    - docker

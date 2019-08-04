@@ -1,0 +1,26 @@
+---
+- name: Check and Install python
+  hosts: all
+  become: true
+  gather_facts: False
+
+  tasks:
+    - name: Install python for Ansible
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+      changed_when: False
+
+    - name: Install pyhthon dependencies
+      vars:
+        packages:
+          - python-pip 
+          - python-virtualenv 
+          - python-setuptools
+      apt:
+        name: "{{ packages }}"
+        update_cache: yes
+        state: present
+
+    - name: Install python libraries for use docker with Ansible
+      pip:
+        name: docker
+        state: present
