@@ -33,15 +33,23 @@ docker build -t <your-dockerhub-login>/ui:1.0 ./ui
 ```shell
 docker network create reddit
 docker run -d --network=reddit --network-alias=post_db --network-alias=comment_db mongo:latest
-docker run -d --network=reddit --network-alias=post <your-dockerhub-login>/post:1.0
-docker run -d --network=reddit --network-alias=comment <your-dockerhub-login>/comment:1.0
-docker run -d --network=reddit -p 9292:9292 <your-dockerhub-login>/ui:1.0
+docker run -d --network=reddit --network-alias=post sjotus/post:1.0
+docker run -d --network=reddit --network-alias=comment sjotus/comment:1.0
+docker run -d --network=reddit -p 9292:9292 sjotus/ui:1.0
 ```
 
 Теперь для проверки работоспособности можно зайти на http://<docker-host_ip>:9292
 
 ### Запуск контейнеров с другими сетевыми алиасами (*)
 
+Т.к. взаимодействие между контейнерами организовано через ENV переменные записанные в докерфайле, то для того, что бы контейнеры могли взаимодействовать через новые алиасы эти переменные необходимо переопределить при запуске контейнера с помощью ключа `--env`. Более подробно, а так же другие варианты задания переменных при запуске можно посмотреть в [официальной документации](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file)
+
+```shell
+docker run -d --network=reddit --network-alias=db_post --network-alias=db_comment mongo:latest
+docker run -d --network=reddit --network-alias=post_new --env POST_DATABASE_HOST=db_post sjotus/post:1.0
+docker run -d --network=reddit --network-alias=comment_new --env COMMENT_DATABASE_HOST=db_comment sjotus/comment:1.0
+docker run -d --network=reddit -p 9292:9292 --env POST_SERVICE_HOST=post_new --env COMMENT_SERVICE_HOST=comment_new sjotus/ui:1.0
+```
 
 ----
 ## Homework 12 (docker-2)
