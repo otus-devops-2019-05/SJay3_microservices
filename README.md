@@ -45,6 +45,14 @@ docker run -d --network=reddit -p 9292:9292 sjotus/ui:1.0
 
 Т.к. взаимодействие между контейнерами организовано через ENV переменные записанные в докерфайле, то для того, что бы контейнеры могли взаимодействовать через новые алиасы эти переменные необходимо переопределить при запуске контейнера с помощью ключа `--env`. Более подробно, а так же другие варианты задания переменных при запуске можно посмотреть в [официальной документации](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file)
 
+Остановим все контейнеры:
+
+```shell
+docker kill $(docker ps -q)
+```
+
+И запустим с новыми алиасами
+
 ```shell
 docker run -d --network=reddit --network-alias=db_post --network-alias=db_comment mongo:latest
 docker run -d --network=reddit --network-alias=post_new --env POST_DATABASE_HOST=db_post sjotus/post:1.0
@@ -55,6 +63,7 @@ docker run -d --network=reddit -p 9292:9292 --env POST_SERVICE_HOST=post_new --e
 ### Опитмизация докер-образов (*)
 
 Сделаем оптимизацию образа ui, собрав его на alpine сохранив его в файле Dockerfile.1
+
 
 ----
 ## Homework 12 (docker-2)
