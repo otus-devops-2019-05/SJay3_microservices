@@ -6,7 +6,7 @@ COPY . /app
 RUN apk update && apk add --no-cache \
 	gcc \
 	musl-dev \
-	&& pip install -r /app.requirements.txt
+	&& pip install -r /app/requirements.txt
 
 ENV POST_DATABASE_HOST post_db
 ENV POST_DATABASE posts
