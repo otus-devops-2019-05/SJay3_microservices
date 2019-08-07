@@ -8,6 +8,7 @@ SJay3 microservices repository
 - Сборка и запуск приложений в контейнерах
 - Запуск контейнеров с другими сетевыми алиасами (*)
 - Опитмизация докер-образов (*)
+- Подключение вольюма к контейнеру
 
 ### Сборка и запуск приложений в контейнерах
 Скачаем исходные коды приложения и положим их в корень нашего репозитория в папку src. Таким образом у нас получится структура:
@@ -63,7 +64,27 @@ docker run -d --network=reddit -p 9292:9292 --env POST_SERVICE_HOST=post_new --e
 ### Опитмизация докер-образов (*)
 
 Сделаем оптимизацию образа ui, собрав его на alpine сохранив его в файле Dockerfile.1
+Аналогичным образом переделаем и другие докерфайлы, попутно заменив инструкции ADD на COPY.
 
+Создавая новые образы с помощью команды `docker build` будем повышать минорную версию в теге.
+
+### Подключение вольюма к контейнеру
+
+Создадим вольюм
+
+```shell
+docker volume create reddit_db
+```
+
+Теперь убьем старые контейнеры и запустим новые, при этом подключив к контейнеру с базой созданный вольюм. Таким образом, база будет сохраняться на вольюм и данные не пропадут со смертью контейнера
+
+```shell
+docker kill $(docker ps -q)
+docker run -d --network=reddit --network-alias=post_db --network-alias=comment_db -v reddit_db:/data/db mongo:latest
+docker run -d --network=reddit --network-alias=post ssjotus/post:1.0
+docker run -d --network=reddit --network-alias=comment sjotus/comment:1.0
+docker run -d --network=reddit -p 9292:9292 sjotus/ui:2.0
+```
 
 ----
 ## Homework 12 (docker-2)
