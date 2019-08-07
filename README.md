@@ -5,6 +5,42 @@ SJay3 microservices repository
 
 ## Homework 13 (docker-3)
 В данном домашнем задании было сделано:
+- Сборка и запуск приложений в контейнерах
+- Запуск контейнеров с другими сетевыми алиасами (*)
+
+### Сборка и запуск приложений в контейнерах
+Скачаем исходные коды приложения и положим их в корень нашего репозитория в папку src. Таким образом у нас получится структура:
+- src/post-py
+- src/comment
+- src/ui
+
+Каждая из этих директорий является сервисом и будет превращена в контейнер, поэтому напишем докерфайлы к каждому сервису.
+
+Сборку будем производить на удаленном хосте docker-host, который мы создавали в прошлый [раз](#Создание_удаленного_хоста_с_docker)
+
+Подключимся к хосту, скачаем последний образ монги и выполним команды сборки образов:
+
+```shell
+eval $(docker-machine env docker-host)
+docker pull mongo:latest
+docker build -t <your-dockerhub-login>/post:1.0 ./post-py
+docker build -t <your-dockerhub-login>/comment:1.0 ./comment
+docker build -t <your-dockerhub-login>/ui:1.0 ./ui
+```
+
+Теперь создадим сеть и запустим контейнеры:
+
+```shell
+docker network create reddit
+docker run -d --network=reddit --network-alias=post_db --network-alias=comment_db mongo:latest
+docker run -d --network=reddit --network-alias=post <your-dockerhub-login>/post:1.0
+docker run -d --network=reddit --network-alias=comment <your-dockerhub-login>/comment:1.0
+docker run -d --network=reddit -p 9292:9292 <your-dockerhub-login>/ui:1.0
+```
+
+Теперь для проверки работоспособности можно зайти на http://<docker-host_ip>:9292
+
+### Запуск контейнеров с другими сетевыми алиасами (*)
 
 
 ----
