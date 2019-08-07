@@ -7,6 +7,7 @@ SJay3 microservices repository
 В данном домашнем задании было сделано:
 - Сборка и запуск приложений в контейнерах
 - Запуск контейнеров с другими сетевыми алиасами (*)
+- Опитмизация докер-образов (*)
 
 ### Сборка и запуск приложений в контейнерах
 Скачаем исходные коды приложения и положим их в корень нашего репозитория в папку src. Таким образом у нас получится структура:
@@ -50,6 +51,10 @@ docker run -d --network=reddit --network-alias=post_new --env POST_DATABASE_HOST
 docker run -d --network=reddit --network-alias=comment_new --env COMMENT_DATABASE_HOST=db_comment sjotus/comment:1.0
 docker run -d --network=reddit -p 9292:9292 --env POST_SERVICE_HOST=post_new --env COMMENT_SERVICE_HOST=comment_new sjotus/ui:1.0
 ```
+
+### Опитмизация докер-образов (*)
+
+Сделаем оптимизацию образа ui, собрав его на alpine сохранив его в файле Dockerfile.1
 
 ----
 ## Homework 12 (docker-2)
