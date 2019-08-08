@@ -3,6 +3,90 @@ SJay3 microservices repository
 
 [![Build Status](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices.svg?branch=master)](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices)
 
+## Homework 13 (docker-3)
+В данном домашнем задании было сделано:
+- Сборка и запуск приложений в контейнерах
+- Запуск контейнеров с другими сетевыми алиасами (*)
+- Опитмизация докер-образов (*)
+- Подключение вольюма к контейнеру
+
+### Сборка и запуск приложений в контейнерах
+Скачаем исходные коды приложения и положим их в корень нашего репозитория в папку src. Таким образом у нас получится структура:
+- src/post-py
+- src/comment
+- src/ui
+
+Каждая из этих директорий является сервисом и будет превращена в контейнер, поэтому напишем докерфайлы к каждому сервису.
+
+Сборку будем производить на удаленном хосте docker-host, который мы создавали в прошлый [раз](#Создание_удаленного_хоста_с_docker)
+
+Подключимся к хосту, скачаем последний образ монги и выполним команды сборки образов:
+
+```shell
+eval $(docker-machine env docker-host)
+docker pull mongo:latest
+docker build -t <your-dockerhub-login>/post:1.0 ./post-py
+docker build -t <your-dockerhub-login>/comment:1.0 ./comment
+docker build -t <your-dockerhub-login>/ui:1.0 ./ui
+```
+
+Теперь создадим сеть и запустим контейнеры:
+
+```shell
+docker network create reddit
+docker run -d --network=reddit --network-alias=post_db --network-alias=comment_db mongo:latest
+docker run -d --network=reddit --network-alias=post sjotus/post:1.0
+docker run -d --network=reddit --network-alias=comment sjotus/comment:1.0
+docker run -d --network=reddit -p 9292:9292 sjotus/ui:1.0
+```
+
+Теперь для проверки работоспособности можно зайти на http://<docker-host_ip>:9292
+
+### Запуск контейнеров с другими сетевыми алиасами (*)
+
+Т.к. взаимодействие между контейнерами организовано через ENV переменные записанные в докерфайле, то для того, что бы контейнеры могли взаимодействовать через новые алиасы эти переменные необходимо переопределить при запуске контейнера с помощью ключа `--env`. Более подробно, а так же другие варианты задания переменных при запуске можно посмотреть в [официальной документации](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file)
+
+Остановим все контейнеры:
+
+```shell
+docker kill $(docker ps -q)
+```
+
+И запустим с новыми алиасами
+
+```shell
+docker run -d --network=reddit --network-alias=db_post --network-alias=db_comment mongo:latest
+docker run -d --network=reddit --network-alias=post_new --env POST_DATABASE_HOST=db_post sjotus/post:1.0
+docker run -d --network=reddit --network-alias=comment_new --env COMMENT_DATABASE_HOST=db_comment sjotus/comment:1.0
+docker run -d --network=reddit -p 9292:9292 --env POST_SERVICE_HOST=post_new --env COMMENT_SERVICE_HOST=comment_new sjotus/ui:1.0
+```
+
+### Опитмизация докер-образов (*)
+
+Сделаем оптимизацию образа ui, собрав его на alpine сохранив его в файле Dockerfile.1
+Аналогичным образом переделаем и другие докерфайлы, попутно заменив инструкции ADD на COPY.
+
+Создавая новые образы с помощью команды `docker build` будем повышать минорную версию в теге.
+
+### Подключение вольюма к контейнеру
+
+Создадим вольюм
+
+```shell
+docker volume create reddit_db
+```
+
+Теперь убьем старые контейнеры и запустим новые, при этом подключив к контейнеру с базой созданный вольюм. Таким образом, база будет сохраняться на вольюм и данные не пропадут со смертью контейнера
+
+```shell
+docker kill $(docker ps -q)
+docker run -d --network=reddit --network-alias=post_db --network-alias=comment_db -v reddit_db:/data/db mongo:latest
+docker run -d --network=reddit --network-alias=post ssjotus/post:1.0
+docker run -d --network=reddit --network-alias=comment sjotus/comment:1.0
+docker run -d --network=reddit -p 9292:9292 sjotus/ui:2.0
+```
+
+----
 ## Homework 12 (docker-2)
 В данном домашнем задании было сделано:
 - Установка докера
