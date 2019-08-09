@@ -17,6 +17,15 @@ SJay3 microservices repository
 Рассмотрим некоторые из них.
 
 #### Dirver none
+Этот драйвер означает, что у контейнера не будет никаких внешних сетевых интерфейсов. Только loopback.
+
+Выполним команду, что бы проверить это:
+
+```shell
+docker run -it --rm --network none joffotron/docker-net-tools -c ifconfig
+```
+
+#### Driver host
 
 
 ----
