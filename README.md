@@ -26,7 +26,7 @@ docker run -it --rm --network none joffotron/docker-net-tools -c ifconfig
 ```
 
 #### Driver host
-
+При использовании этого драйвера, контейнер подключается напрямую к хосту.
 
 ----
 ## Homework 13 (docker-3)
