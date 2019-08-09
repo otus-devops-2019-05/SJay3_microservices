@@ -3,6 +3,23 @@ SJay3 microservices repository
 
 [![Build Status](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices.svg?branch=master)](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices)
 
+## Homework 14 (docker-4)
+В данном домашнем задании было сделано:
+- Работа с сетью Docker
+
+### Работа с сетью Docker
+Основные драйверы для работы с сетью в докере:
+- none
+- host
+- macvlan
+- bridge
+
+Рассмотрим некоторые из них.
+
+#### Dirver none
+
+
+----
 ## Homework 13 (docker-3)
 В данном домашнем задании было сделано:
 - Сборка и запуск приложений в контейнерах
