@@ -89,7 +89,29 @@ docker network connect front_net comment
 pip install docker-compose
 ```
 
+#### docker-compose. Основные команды.
 
+```shell
+# поднятие контейнеров
+docker-compose up
+# поднятие контейнеров в режиме detach
+docker-compose up -d
+# команда up скачивает недостающие образы или собирает образ из докер файла, после чего запускает его
+
+# Остановка и удаление контейнера
+docker-compose down
+
+# Запуск и остановка контейнеров
+docker-compose start
+docker-compose stop
+# start запускает ранее остановленные контейнеры. Stop просто останавливает контейнеры без их удаления
+
+# Просмотр информации о работе compose
+docker-compose ps
+
+```
+
+Docker-compose поддерживает интерполяцию переменных окружения. Так же, поддерживает автоматическую загрузку переменных из файла с расширением `.env`
 
 ----
 ## Homework 13 (docker-3)
