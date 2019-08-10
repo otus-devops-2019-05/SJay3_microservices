@@ -77,6 +77,18 @@ docker network connect front_net comment
 ```
 
 ### Работа с docker compose
+#### Установка docker compose
+Инструкции по установке:
+- MacOS (идет в комплекте): https://docs.docker.com/docker-for-mac/install/
+- Windows (идет в комплекте): https://docs.docker.com/docker-for-windows/install/
+- Linux: https://docs.docker.com/compose/install/#install-compose
+
+Для Linux так же можно использовать команду:
+
+```shell
+pip install docker-compose
+```
+
 
 
 ----
