@@ -6,8 +6,8 @@ services:
     command: ["puma", "--debug", "-w", "2"]
   post:
     volumes:
-      - ./post:/app
+      - ./post-py:/app
   comment:
     volumes:
-      - ./post-py:/app
+      - ./comment:/app
     command: ["puma", "--debug", "-w", "2"]
