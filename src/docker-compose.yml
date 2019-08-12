@@ -1,30 +1,30 @@
-version: '3.3'
+version: '3.5'
 services:
   post_db:
     image: mongo:${MONGO_VERSION}
     volumes:
       - post_db:/data/db
     networks:
-      - reddit_back_net
+      - reddit_back
   ui:
     build: ./ui
     image: ${USERNAME}/ui:${UI_VERSION}
     ports:
       - ${UI_PORT}:9292/tcp
     networks:
-      - reddit_front_net
+      - reddit_front
   post:
     build: ./post-py
     image: ${USERNAME}/post:${POST_VERSION}
     networks:
-      - reddit_back_net
-      - reddit_front_net
+      - reddit_back
+      - reddit_front
   comment:
     build: ./comment
     image: ${USERNAME}/comment:${COMMENT_VERSION}
     networks:
-      - reddit_back_net
-      - reddit_front_net
+      - reddit_back
+      - reddit_front
 
 volumes:
   post_db:
