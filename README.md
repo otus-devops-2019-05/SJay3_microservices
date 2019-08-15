@@ -76,8 +76,6 @@ git remote add gitlab http://<docker-host-ip>/homework/example.git
 git push gitlab gitlab-ci-1
 ```
 
-!! ВАЖНО. На Windows это почему-то не работает. При добавлении remote через WSL и следующим пуше гитлаб возвращает 503 ошибку. Через SourceTree выдается тоже самое. При этом в linux все отработало нормально. Не ясно с чем это связано.
-
 ### Настройка Gitlab CI/CD Pipeline
 В корне репозитория создадим тестовый файл `.gitlab-ci.yml`, в котором опишем используемые stages и тестовые джобы.
 
