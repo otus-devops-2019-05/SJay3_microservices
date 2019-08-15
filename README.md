@@ -6,6 +6,9 @@ SJay3 microservices repository
 ## Homewokr 15 (gitlab-ci-1)
 В данном домашнем задании было сделано:
 - Установка Gitlab в докере
+- Настройка Gitlab
+- Настройка Gitlab CI/CD Pipeline
+- Тестирование reddit
 
 ### Установка Gitlab в докере
 #### Подготовка инфраструктуры
@@ -24,9 +27,10 @@ terraform apply
 
 #### Запуск GitlabCi в докере
 
-Перед началом запуска гитлаба в докер-контейнере, необходимо подготовить окружение. Логинимся на созданную машину по ssh и выполняем команды:
+Перед началом запуска гитлаба в докер-контейнере, необходимо подготовить окружение. Логинимся на созданную машину по ssh и выполняем команды от рута:
 
 ```shell
+sudo su
 mkdir -p /srv/gitlab/config /srv/gitlab/data /srv/gitlab/logs
 cd /srv/gitlab
 touch docker-compose.yml
@@ -56,6 +60,76 @@ web:
 
 ```shell
 docker-compose up -d
+```
+
+### Настройка Gitlab
+Теперь откроем в браузере http://<docker-host-ip>, и гитлаб предложит изменить нам пароль от встроенного пользователя root.
+Далее, залогинимся и перейдем в глобальные настройки. Там выбираем settings -> Sign-up restrictions и снимаем галочку с sign-up enabled.
+
+Теперь создадим группу homework, а внутри неё создадим репозиторий example.
+
+Добавим наш созданный репозиторий в remotes нашего репозитория с микросервисами и сделаем пуш:
+
+```shell
+git checkout -b gitlab-ci-1
+git remote add gitlab http://<docker-host-ip>/homework/example.git
+git push gitlab gitlab-ci-1
+```
+
+!! ВАЖНО. На Windows это почему-то не работает. При добавлении remote через WSL и следующим пуше гитлаб возвращает 503 ошибку. Через SourceTree выдается тоже самое. При этом в linux все отработало нормально. Не ясно с чем это связано.
+
+### Настройка Gitlab CI/CD Pipeline
+В корне репозитория создадим тестовый файл `.gitlab-ci.yml`, в котором опишем используемые stages и тестовые джобы.
+
+Сохраняем файл и пушим в репозиторий гитлаба:
+
+```shell
+git add .gitlab-ci.yml
+git commit -m "add pipeline definition"
+git push gitlab gitlab-ci-1
+```
+
+Зайдем в гитлаб в наш репозиторий в CI/CD -> Pipelines и увидим, что пайплайн готов, но в статусе pending, т.к. у нас нет ранера
+В репозитории идем в settings -> CI/CD -> Runner settings и находим токен для ранера. Запоминаем его - он понадобится для регистрации ранера.
+
+Теперь сделаем ранер. На сервере где запущен контейнер с гитлабом выполним команду:
+
+```shell
+docker run -d --name gitlab-runner --restart always \
+-v /srv/gitlab-runner/config:/etc/gitlab-runner \
+-v /var/run/docker.sock:/var/run/docker.sock \
+gitlab/gitlab-runner:latest
+```
+
+После запуска контейнера зарегистрируем ранер:
+
+```shell
+root@gitlab-ci:~# docker exec -it gitlab-runner gitlab-runner register --run-untagged --locked=false
+Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com/):
+http://<YOUR-VM-IP>/
+Please enter the gitlab-ci token for this runner:
+<TOKEN>
+Please enter the gitlab-ci description for this runner:
+[38689f5588fe]: my-runner
+Please enter the gitlab-ci tags for this runner (comma separated):
+linux,xenial,ubuntu,docker
+Please enter the executor:
+docker
+Please enter the default Docker image (e.g. ruby:2.1):
+alpine:latest
+Runner registered successfully.
+```
+
+Теперь можно убедиться что пайплайн заработал и выполняется.
+
+### Тестирование reddit
+Добавим приложение reddit в наш репозиторий
+
+```shell
+git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
+git add reddit/
+git commit -m “Add reddit app”
+git push gitlab gitlab-ci-1
 ```
 
 ----
