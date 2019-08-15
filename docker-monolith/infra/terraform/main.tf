@@ -24,6 +24,7 @@ resource "google_compute_instance" "docker" {
   boot_disk {
     initialize_params {
       image = "${var.docker_disk_image}"
+      size = "${var.docker_disk_size}"
     }
   }
 
@@ -47,4 +48,18 @@ resource "google_compute_instance" "docker" {
 
 resource "google_compute_address" "docker_ip" {
   name = "docker-tf-host-ip-${count.index + 1}"
+}
+
+resource "google_compute_firewall" "docker_http" {
+  count = var.enable_web_traffic ? 1 : 0 # Если переменная false ресурс не будет создан
+  name = "allow-docker-web"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports = ["80", "443"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags = ["docker-host"]
 }
