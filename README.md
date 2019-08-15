@@ -22,6 +22,41 @@ cd docker-monolith/infra/terraform
 terraform apply
 ```
 
+#### Запуск GitlabCi в докере
+
+Перед началом запуска гитлаба в докер-контейнере, необходимо подготовить окружение. Логинимся на созданную машину по ssh и выполняем команды:
+
+```shell
+mkdir -p /srv/gitlab/config /srv/gitlab/data /srv/gitlab/logs
+cd /srv/gitlab
+touch docker-compose.yml
+```
+
+Файл docker-compose.yml
+
+```yaml
+web:
+  image: 'gitlab/gitlab-ce:latest'
+  restart: always
+  hostname: 'gitlab.example.com'
+  environment:
+    GITLAB_OMNIBUS_CONFIG: |
+      external_url 'http://<YOUR-VM-IP>'
+  ports:
+    - '80:80'
+    - '443:443'
+    - '2222:22'
+  volumes:
+    - '/srv/gitlab/config:/etc/gitlab'
+    - '/srv/gitlab/logs:/var/log/gitlab'
+    - '/srv/gitlab/data:/var/opt/gitlab'
+```
+
+Теперь запускаем контейнер с гитлабом
+
+```shell
+docker-compose up -d
+```
 
 ----
 ## Homework 14 (docker-4)
