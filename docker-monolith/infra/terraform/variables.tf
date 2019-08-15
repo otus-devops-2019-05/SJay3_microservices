@@ -50,7 +50,7 @@ variable "instance_count" {
 }
 
 variable "enable_web_traffic" {
-  type = "bool"
+  type = "string"
   description = "Create http/https firewall rules and map to instance or not"
-  default = false
+  default = "false"
 }

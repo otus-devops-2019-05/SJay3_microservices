@@ -7,4 +7,4 @@ region = "europe-west1"
 zone = "europe-west1-b"
 machine_type = "g1-small"
 instance_count = "1"
-enable_web_traffic = false
+enable_web_traffic = "false"

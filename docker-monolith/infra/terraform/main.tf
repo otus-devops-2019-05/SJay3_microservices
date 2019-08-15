@@ -51,7 +51,7 @@ resource "google_compute_address" "docker_ip" {
 }
 
 resource "google_compute_firewall" "docker_http" {
-  count = var.enable_web_traffic ? 1 : 0 # Если переменная false ресурс не будет создан
+  count = "${var.enable_web_traffic ? 1 : 0}" # Если переменная false ресурс не будет создан
   name = "allow-docker-web"
   network = "default"
 
