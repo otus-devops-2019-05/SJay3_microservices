@@ -149,6 +149,19 @@ deploy_dev_job:
     url: http://dev.example.com
 ```
 
+Теперь определим еще 2 окружения: staging и production. В отличии от dev окружения, изменения на них должны выкатываться с кнопки.
+
+```yaml
+staging:
+  stage: stage
+  when: manual
+  script:
+    - echo 'Deploy'
+  environment:
+    name: stage
+    url: https://beta.example.com
+```
+
 ----
 ## Homework 14 (docker-4)
 В данном домашнем задании было сделано:
