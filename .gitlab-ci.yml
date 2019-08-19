@@ -21,9 +21,7 @@ build_job:
     - pwd
     - uname -a
   script:
-    - echo 'Building'
-    - pwd
-    - uname -a
+    - docker info
 
 test_unit_job:
   stage: test
