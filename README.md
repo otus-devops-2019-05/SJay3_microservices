@@ -130,6 +130,11 @@ git commit -m “Add reddit app”
 git push gitlab gitlab-ci-1
 ```
 
+Создадим файл с тестом в корне папки reddit с именем simpletest.rb. В `.gitlab-ci.yml` в разделе `test_unit_job` пропиишем вызов этого скрипта.
+Теперь при каждом изменении в коде будет запускаться тест.
+
+
+
 ----
 ## Homework 14 (docker-4)
 В данном домашнем задании было сделано:
