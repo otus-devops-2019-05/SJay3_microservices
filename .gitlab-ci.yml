@@ -1,4 +1,8 @@
-image: ruby:2.4.2
+default:
+  image: ruby:2.4.2
+  before_script:
+    - cd reddit
+    - bundle install
 
 stages:
   - build
@@ -10,14 +14,12 @@ stages:
 variables:
   DATABASE_URL: 'mongodb://mongo/user_posts'
 
-before_script:
-  - cd reddit
-  - bundle install
-
 build_job:
+  image: docker:19.03
   stage: build
   script:
     - echo 'Building'
+    - pwd
 
 test_unit_job:
   stage: test
