@@ -177,6 +177,23 @@ staging:
 
 #### Динамические окружения
 
+Гитлаб может динамически созадавать окружения, к примеру окружение для каждой feature ветки. Добавим следующую конфигурацию:
+
+```yaml
+branch review:
+  stage: review
+  script: echo "Deploy to $CI_ENVIRONMENT_SLUG"
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    url: http://$CI_ENVIRONMENT_SLUG.example.com
+  only:
+    - branches
+  except:
+    - master
+```
+
+Теперь на каждую ветку, кроме мастера, будет создано окружение
+
 ----
 ## Homework 14 (docker-4)
 В данном домашнем задании было сделано:
