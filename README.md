@@ -162,6 +162,19 @@ staging:
     url: https://beta.example.com
 ```
 
+Добавим директиву, которая не позволит нам выкатить на staging и production код, не помеченный с помощью тега в git.
+
+```yaml
+staging:
+  stage: stage
+  when: manual
+  only:
+    - /^\d+\.\d+\.\d+/
+  script:
+    - echo 'Deploy'
+...
+```
+
 ----
 ## Homework 14 (docker-4)
 В данном домашнем задании было сделано:
