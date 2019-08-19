@@ -18,10 +18,12 @@ build_job:
   image: docker:19.03
   stage: build
   before_script:
-    - docker info
+    - pwd
+    - uname -a
   script:
     - echo 'Building'
     - pwd
+    - uname -a
 
 test_unit_job:
   stage: test
