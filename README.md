@@ -9,6 +9,7 @@ SJay3 microservices repository
 - Настройка Gitlab
 - Настройка Gitlab CI/CD Pipeline
 - Тестирование reddit
+- Настройка окружений
 
 ### Установка Gitlab в докере
 #### Подготовка инфраструктуры
@@ -133,7 +134,20 @@ git push gitlab gitlab-ci-1
 Создадим файл с тестом в корне папки reddit с именем simpletest.rb. В `.gitlab-ci.yml` в разделе `test_unit_job` пропиишем вызов этого скрипта.
 Теперь при каждом изменении в коде будет запускаться тест.
 
+### Настройка окружений
 
+Настроим dev окружение.
+В файле `.gitlab-ci..yml` переименуем stage из deploy в review, а deploy_job в `deploy_dev_job`. Добавим в эту джобу environment:
+
+```yaml
+deploy_dev_job:
+  stage: review
+  script:
+    - echo 'Deploy'
+  environment:
+    name: dev
+    url: http://dev.example.com
+```
 
 ----
 ## Homework 14 (docker-4)
