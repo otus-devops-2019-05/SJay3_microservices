@@ -15,9 +15,9 @@ variables:
   DATABASE_URL: 'mongodb://mongo/user_posts'
 
 build_job:
-  image: docker:19.03
+  image: docker:18.09.7
   services:
-    - name: docker:19.03-dind
+    - name: docker:18.09.7-dind
   stage: build
   tags: 
     - dind
