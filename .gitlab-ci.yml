@@ -15,10 +15,12 @@ variables:
   DATABASE_URL: 'mongodb://mongo/user_posts'
 
 build_job:
-  image: docker:19.03.1-dind
+  image: docker:18.03.1-dind
   stage: build
   tags: 
     - dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
   before_script:
     - pwd
     - uname -a
