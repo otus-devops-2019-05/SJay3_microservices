@@ -21,8 +21,8 @@ build_job:
   stage: build
   tags: 
     - dind
-  # variables:
-  #   DOCKER_HOST: tcp://docker:2375/
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
   before_script:
     - pwd
     - uname -a
