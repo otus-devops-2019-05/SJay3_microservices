@@ -211,18 +211,22 @@ default:
 ```
 
 
+Не интерактивная регистрация раннера для запуска в привилегированном режиме контейнеров
 
-Проверить без привелигированного режима
-
-
-Т.к. у нас ранер работает в контейнере, то для сборки другого контейнера он должен быть запущен в привилегированном режиме.
-Отредактируем конфигурацию ранера в `/srv/gitlab-runner/config/config.toml` в секции `[runners.docker]` поставим следующиее значение:
-
+```shell
+docker exec -it gitlab-runner gitlab-runner register \
+--non-interactive \
+--run-untagged \
+--locked=false \
+--url http://35.240.96.208/ \
+--registration-token mzAo7yQESJKqoQxsZzuZ \
+--executor docker \
+--description "Privileged Docker runner" \
+--docker-image "docker:19.03" \
+--docker-privileged \
+--tag-list "docker,linux,dind"
 ```
-privileged = true
-```
 
-И перезапустим контейнер.
 
 ----
 ## Homework 14 (docker-4)
