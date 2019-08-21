@@ -3,8 +3,8 @@ default:
   before_script:
     - cd reddit
     - bundle install
-  # services:
-  #   - name: docker:19.03-dind
+  services:
+    - name: docker:19.03-dind
 
 stages:
   - build
@@ -23,8 +23,8 @@ build_job:
   #   DOCKER_HOST: tcp://docker:2375
   #   DOCKER_TLS_CERTDIR: ""
   image: docker:19.03
-  services: 
-    - docker:dind
+  # services: 
+  #   - docker:dind
   stage: build
   tags:
     - dind
