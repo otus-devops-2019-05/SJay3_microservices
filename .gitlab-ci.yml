@@ -3,6 +3,8 @@ default:
   before_script:
     - cd reddit
     - bundle install
+  services:
+    - name: docker:19.03-dind
 
 stages:
   - build
@@ -15,9 +17,7 @@ variables:
   DATABASE_URL: 'mongodb://mongo/user_posts'
 
 build_job:
-  image: docker:18.09.8
-  # services:
-  #   - name: docker:18.09.8-dind
+  image: docker:19.03
   stage: build
   tags: 
     - dind
