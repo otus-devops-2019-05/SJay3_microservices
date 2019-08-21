@@ -22,7 +22,7 @@ build_job:
   tags:
     - dind
   variables:
-    DOCKER_HOST: tcp://localhost:2376/
+    DOCKER_HOST: unix:///var/run/docker.sock
   #   DOCKER_TLS_CERTDIR: ""
   before_script:
     - ps aux
