@@ -17,18 +17,20 @@ variables:
   DATABASE_URL: 'mongodb://mongo/user_posts'
 
 build_job:
-  image: docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  image: docker:19.03
+  service: docker:dind
   stage: build
   tags:
     - dind
-  variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
-  #   DOCKER_TLS_CERTDIR: ""
   before_script:
     - ps aux
     - uname -a
   script:
     - docker info
+    - docker version
 
 test_unit_job:
   stage: test
