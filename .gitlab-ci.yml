@@ -30,6 +30,7 @@ build_job:
     - dind
   before_script:
     - docker info
+    - echo $CI_SERVER_HOST
     # - pwd
     # - ls -la
   script:
