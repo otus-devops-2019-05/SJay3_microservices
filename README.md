@@ -228,6 +228,8 @@ docker exec -it gitlab-runner gitlab-runner register \
 ```
 
 В каталоге reddit создадим Dockerfile с описанием сборки.
+В настройках репозитория -> CI/CD -> Variables создадим 2 переменные `DOCKER_LOGIN` и `DOCKER_PASS` для того, что бы можно было подключиться к докер-хабу. Переменную `DOCKER_PASS` необходимо сделать masked
+
 
 ----
 ## Homework 14 (docker-4)
