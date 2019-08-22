@@ -40,6 +40,8 @@ build_job:
     - docker push sjotus/gitlab-reddit:$CI_PIPELINE_IID
 test_unit_job:
   stage: test
+  tags:
+    - docker
   services:
     - mongo:latest
   script:
@@ -47,6 +49,8 @@ test_unit_job:
 
 test_integration_job:
   stage: test
+  tags:
+    - docker
   script:
     - echo 'Testing 2'
 
