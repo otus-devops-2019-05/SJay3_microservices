@@ -272,9 +272,20 @@ sudo systemctl restart docker.service
 
 
 ### Автоматизация развертывания gitlab-ci runner (*)
+Для автоматизации развертывания и регистрации раннера будем использовать ансибл. Создадим директорию gitlab-ci, а внутри папку ansible.
 
 ### Интеграция pipeline со slack (*)
 
+Переходим по ссылке: https://devops-team-otus.slack.com/apps/A0F7XDUAZ-incoming-webhooks?next_id=0
+
+Нажимаем кнопку **Add Configuration**. Выбираем свой канал и нажимаем на кнопку **Add Intergration**. Копируем ссылку из поля **Webhook URL**. Нажимаем **Save Settings**.
+
+Теперь идем в гитбал в проект settings -> integration и находим там пункт **slack notification**.
+Чекаем Active. В поле Webhook вставляем скопированную ссылку. В поле Username пишем Gitlab. Снимаем галочку "Notify only default branch". Можно так же снять "Notify only broken pipelines". В списке оставляем с галочками только то, что нам нужно и указываем канал.
+
+Сохраняемся и ... PROFIT!!
+
+[Канал с интеграцией](https://devops-team-otus.slack.com/messages/CK8QN21S6)
 
 ----
 ## Homework 14 (docker-4)
