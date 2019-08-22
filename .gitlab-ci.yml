@@ -30,6 +30,8 @@ build_job:
     - dind
   before_script:
     - docker info
+    - pwd
+    - ls -la
   script:
     - cd /reddit && docker build -t reddit-$CI_COMMIT_REF_NAME-$CI_PIPELINE_IID .
     - docker tag reddit-$CI_COMMIT_REF_NAME-$CI_PIPELINE_IID sjotus/gitlab-reddit:$CI_COMMIT_REF_NAME-$CI_PIPELINE_IID
