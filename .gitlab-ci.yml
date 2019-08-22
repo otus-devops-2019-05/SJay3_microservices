@@ -38,6 +38,7 @@ build_job:
     - docker tag reddit-$CI_COMMIT_REF_NAME:$CI_PIPELINE_IID sjotus/gitlab-reddit:$CI_PIPELINE_IID
     - docker login -u $DOCKER_LOGIN -p $DOCKER_PASS
     - docker push sjotus/gitlab-reddit:$CI_PIPELINE_IID
+
 test_unit_job:
   stage: test
   tags:
@@ -47,14 +48,14 @@ test_unit_job:
   script:
     - ruby simpletest.rb
 
-test_integration_job:
+.test_integration_job:
   stage: test
   tags:
     - docker
   script:
     - echo 'Testing 2'
 
-deploy_dev_job:
+.deploy_dev_job:
   stage: review
   script:
     - echo 'Deploy'
@@ -64,11 +65,11 @@ deploy_dev_job:
 
 branch review:
   image: docker:19.03
-  # variables:
-  #   DOCKER_HOST: tcp://$CI_SERVER_HOST:2375
+  variables:
+    DOCKER_HOST: tcp://$CI_SERVER_HOST:2375
   stage: review
   tags:
-    - shell
+    - docker
   before_script:
     - docker info
     - echo $CI_SERVER_HOST
