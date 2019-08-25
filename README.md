@@ -274,6 +274,8 @@ sudo systemctl restart docker.service
 ### Автоматизация развертывания gitlab-ci runner (*)
 Для автоматизации развертывания и регистрации раннера будем использовать ансибл. Создадим директорию gitlab-ci, а внутри папку ansible.
 
+asible-galaxy install -r requiements.yml
+
 ### Интеграция pipeline со slack (*)
 
 Переходим по ссылке: https://devops-team-otus.slack.com/apps/A0F7XDUAZ-incoming-webhooks?next_id=0
