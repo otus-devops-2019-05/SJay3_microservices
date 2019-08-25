@@ -13,3 +13,5 @@ docker-monolith/infra/ansible/ubuntu-xenial-16.04-cloudimg-console.log
 *.env
 
 riemers.gitlab-runner
+ubuntu-xenial-16.04-cloudimg-console.log
+
