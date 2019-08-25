@@ -4,6 +4,6 @@
   become: true
   hosts: docker
   vars_files:
-    - vars/gitlab-runner.yml
+    - ../vars/gitlab-runner.yml
   roles:
     - riemers.gitlab-runner
