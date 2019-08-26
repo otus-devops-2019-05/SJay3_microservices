@@ -8,6 +8,7 @@ SJay3 microservices repository
 - Запуск prometheus в контейнере
 - Упорядочивание репозитория
 - Сборка собственного образа prometheus
+- Оркестрация через docker-compose
 
 ### Запуск prometheus в контейнере
 
@@ -60,6 +61,35 @@ docker stop prometheus
 
 ### Сборка собственного образа prometheus
 
+Создадим внутри директории **monitoring** диреткорию **prometheus**, внутри которой создадим **Dockerfile**
+
+```Dockerfile
+FROM prom/prometheus:v2.1.0
+ADD prometheus.yml /etc/prometheus/
+```
+
+И далее рядом создадим файл конфигурации `prometheus.yml`
+
+Теперь все готово для сборки образа
+
+```shell
+export USER_NAME=<docker_hub_login>
+docker build -t $USER_NAME/prometheus .
+```
+
+### Оркестрация через docker-compose
+У нас уже есть докер-композ файл для поднятия наших сервисов, поэтому нам необходимо подключить туда поднятие прометеуса.
+
+Но для начала пересоберем все образы наших сервисов через скрипт `docker_build.sh`, который находится в директории каждого сервиса в каталоге src.
+
+Скрипт для сборки всего из корня репозтория
+
+```shell
+for i in ui post-py comment; do cd src/$i; bash
+docker_build.sh; cd -; done
+```
+
+Теперь добавим в файл `docker/docker-compose.yml` информацию о сервисе с прометеусом
 
 ----
 ## Homewokr 15 (gitlab-ci-1)
