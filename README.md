@@ -3,6 +3,308 @@ SJay3 microservices repository
 
 [![Build Status](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices.svg?branch=master)](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices)
 
+## Homewokr 15 (gitlab-ci-1)
+В данном домашнем задании было сделано:
+- Установка Gitlab в докере
+- Настройка Gitlab
+- Настройка Gitlab CI/CD Pipeline
+- Тестирование reddit
+- Настройка окружений
+- Настройка сборки и деплоя в окружение (*)
+- Автоматизация развертывания gitlab-ci runner (*)
+- Интеграция pipeline со slack (*)
+
+### Установка Gitlab в докере
+#### Подготовка инфраструктуры
+В одном из предыдущих домашних заданий было задание со звездочкой на создание инстанса с докером. Для развертывания инфраструктуры будем использовать эти наработки.
+
+Добавим в конфигурацию терраформа переменные `docker_disk_size` со значением по умолчанию 10, а так же переменную `enable_web_traffic` для управления созданием ресурса фаервола, которая может иметь значения true/false.
+
+В main.tf добавим использование переменной `docker_disk_size` в определение загрузочного диска. Так же, создадим ресурс `google_compute_firewall.docker_http` который будет разрешать http/https трафик для нашего инстанса. Так же добавим в него строку `count = "${var.enable_web_traffic ? 1 : 0}"` Которая означает, что если переменная `enable_web_traffic` установалена в true, то ресурс будет создаваться, а если false, то нет.
+
+Определим переменные в файле terraform.tfvars.
+
+Конфигурация пакера для создания образа с докером у нас уже создана, как и провижининг через ансибл, поэтому нам остается только выполнить команду:
+
+```shell
+cd docker-monolith/infra/terraform
+terraform apply
+```
+
+#### Запуск GitlabCi в докере
+
+Перед началом запуска гитлаба в докер-контейнере, необходимо подготовить окружение. Логинимся на созданную машину по ssh и выполняем команды от рута:
+
+```shell
+sudo su
+mkdir -p /srv/gitlab/config /srv/gitlab/data /srv/gitlab/logs
+cd /srv/gitlab
+touch docker-compose.yml
+```
+
+Файл docker-compose.yml
+
+```yaml
+web:
+  image: 'gitlab/gitlab-ce:latest'
+  restart: always
+  hostname: 'gitlab.example.com'
+  environment:
+    GITLAB_OMNIBUS_CONFIG: |
+      external_url 'http://<YOUR-VM-IP>'
+  ports:
+    - '80:80'
+    - '443:443'
+    - '2222:22'
+  volumes:
+    - '/srv/gitlab/config:/etc/gitlab'
+    - '/srv/gitlab/logs:/var/log/gitlab'
+    - '/srv/gitlab/data:/var/opt/gitlab'
+```
+
+Теперь запускаем контейнер с гитлабом
+
+```shell
+docker-compose up -d
+```
+
+### Настройка Gitlab
+Теперь откроем в браузере http://<docker-host-ip>, и гитлаб предложит изменить нам пароль от встроенного пользователя root.
+Далее, залогинимся и перейдем в глобальные настройки. Там выбираем settings -> Sign-up restrictions и снимаем галочку с sign-up enabled.
+
+Теперь создадим группу homework, а внутри неё создадим репозиторий example.
+
+Добавим наш созданный репозиторий в remotes нашего репозитория с микросервисами и сделаем пуш:
+
+```shell
+git checkout -b gitlab-ci-1
+git remote add gitlab http://<docker-host-ip>/homework/example.git
+git push gitlab gitlab-ci-1
+```
+
+### Настройка Gitlab CI/CD Pipeline
+В корне репозитория создадим тестовый файл `.gitlab-ci.yml`, в котором опишем используемые stages и тестовые джобы.
+
+Сохраняем файл и пушим в репозиторий гитлаба:
+
+```shell
+git add .gitlab-ci.yml
+git commit -m "add pipeline definition"
+git push gitlab gitlab-ci-1
+```
+
+Зайдем в гитлаб в наш репозиторий в CI/CD -> Pipelines и увидим, что пайплайн готов, но в статусе pending, т.к. у нас нет ранера
+В репозитории идем в settings -> CI/CD -> Runner settings и находим токен для ранера. Запоминаем его - он понадобится для регистрации ранера.
+
+Теперь сделаем ранер. На сервере где запущен контейнер с гитлабом выполним команду:
+
+```shell
+docker run -d --name gitlab-runner --restart always \
+-v /srv/gitlab-runner/config:/etc/gitlab-runner \
+-v /var/run/docker.sock:/var/run/docker.sock \
+gitlab/gitlab-runner:latest
+```
+
+После запуска контейнера зарегистрируем ранер:
+
+```shell
+root@gitlab-ci:~# docker exec -it gitlab-runner gitlab-runner register --run-untagged --locked=false
+Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com/):
+http://<YOUR-VM-IP>/
+Please enter the gitlab-ci token for this runner:
+<TOKEN>
+Please enter the gitlab-ci description for this runner:
+[38689f5588fe]: my-runner
+Please enter the gitlab-ci tags for this runner (comma separated):
+linux,xenial,ubuntu,docker
+Please enter the executor:
+docker
+Please enter the default Docker image (e.g. ruby:2.1):
+alpine:latest
+Runner registered successfully.
+```
+
+Теперь можно убедиться что пайплайн заработал и выполняется.
+
+### Тестирование reddit
+Добавим приложение reddit в наш репозиторий
+
+```shell
+git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
+git add reddit/
+git commit -m “Add reddit app”
+git push gitlab gitlab-ci-1
+```
+
+Создадим файл с тестом в корне папки reddit с именем simpletest.rb. В `.gitlab-ci.yml` в разделе `test_unit_job` пропиишем вызов этого скрипта.
+Теперь при каждом изменении в коде будет запускаться тест.
+
+### Настройка окружений
+
+Настроим dev окружение.
+В файле `.gitlab-ci..yml` переименуем stage из deploy в review, а deploy_job в `deploy_dev_job`. Добавим в эту джобу environment:
+
+```yaml
+deploy_dev_job:
+  stage: review
+  script:
+    - echo 'Deploy'
+  environment:
+    name: dev
+    url: http://dev.example.com
+```
+
+Теперь определим еще 2 окружения: staging и production. В отличии от dev окружения, изменения на них должны выкатываться с кнопки.
+
+```yaml
+staging:
+  stage: stage
+  when: manual
+  script:
+    - echo 'Deploy'
+  environment:
+    name: stage
+    url: https://beta.example.com
+```
+
+Добавим директиву, которая не позволит нам выкатить на staging и production код, не помеченный с помощью тега в git.
+
+```yaml
+staging:
+  stage: stage
+  when: manual
+  only:
+    - /^\d+\.\d+\.\d+/
+  script:
+    - echo 'Deploy'
+...
+```
+
+#### Динамические окружения
+
+Гитлаб может динамически созадавать окружения, к примеру окружение для каждой feature ветки. Добавим следующую конфигурацию:
+
+```yaml
+branch review:
+  stage: review
+  script: echo "Deploy to $CI_ENVIRONMENT_SLUG"
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    url: http://$CI_ENVIRONMENT_SLUG.example.com
+  only:
+    - branches
+  except:
+    - master
+```
+
+Теперь на каждую ветку, кроме мастера, будет создано окружение
+
+### Настройка сборки и деплоя в окружение (*)
+Настроим сборку контейнера с приложением reddit и деплой контейнера на созданный для ветки сервер.
+
+Сначала переделаем общую конфигурацию gitlab-ci.yml. В документации глобальное задание параметров `image, services, cache, before_script, after_script` помечено как deprecated. Их следует задавать через ключевое слово `default`
+
+```yaml
+default:
+  image: ruby:2.4.2
+  before_script:
+    - cd reddit
+    - bundle install
+```
+
+Создадим новый раннер со своим конфигом и зарегистрируем его в не интерактивном режиме. Ранер должен уметь запускать контейнеры в привилегированном режиме.
+Не интерактивная регистрация раннера для запуска в привилегированном режиме контейнеров
+
+```shell
+docker exec -it gitlab-runner gitlab-runner register \
+--non-interactive \
+--run-untagged \
+--locked=false \
+--url http://35.240.96.208/ \
+--registration-token mzAo7yQESJKqoQxsZzuZ \
+--executor docker \
+--description "Privileged Docker runner" \
+--docker-image "docker:19.03" \
+--docker-privileged \
+--tag-list "docker,linux,dind"
+```
+
+В каталоге reddit создадим Dockerfile с описанием сборки.
+В настройках репозитория -> CI/CD -> Variables создадим 2 переменные `DOCKER_LOGIN` и `DOCKER_PASS` для того, что бы можно было подключиться к докер-хабу. Переменную `DOCKER_PASS` необходимо сделать masked
+
+Начиная с версии 18.06 докера они включили поддержку tls по умолчанию. И докер слушает шифрованный трафик по порту 2376 вместо 2375. Для того, что бы контейнер с докером запустился без шифрования, необходимо переедать переменную окружения без значения
+
+```
+DOCKER_TLS_CERTDIR=""
+```
+Так же можно передать другую переменную окружения, что бы докер точно взял порт 2375 и подключение выполнялось по нему
+
+```
+DOCKER_HOST=tcp://docker:2375
+```
+
+Эти переменные необходимо указать в .gitlab-ci.yml. 
+Логика сборки следующая:
+- собираем образ командой docker build
+- тегируем образ
+- логинимся в докер-хаб
+- пушим тегированный образ в докер хаб
+
+Для успешного деплоя, необходимо настроить докер-демон на хостовой машине. Необходимо, что бы помимо unix-сокета он слушал tcp-сокет. Т.к. демон управляется systemd, то что бы не править дефолтный юнит, сделаем оверрайд-конфигурацию.
+Создадим файлы в `/etc/systemd/system/docker.service.d/override.conf`
+
+```
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375 --containerd=/run/containerd/containerd.sock
+```
+
+Перечитываем конфигурацию systemd и перезапускаем сервис
+
+```shell
+sudo systemctl daemon-reload
+sudo systemctl restart docker.service
+```
+
+В шаге деплоя указываем переменную `DOCKER_HOST: tcp://$CI_SERVER_HOST:2375` и в качестве скрипта запуск контейнера из докер-хаба.
+
+Так же, необходимо создать правило фаервола в GCP, разрешающее подключение по порту 2375 к машине с докер-хостом.
+
+
+### Автоматизация развертывания gitlab-ci runner (*)
+Для автоматизации развертывания и регистрации раннера будем использовать ансибл. Создадим директорию gitlab-ci, а внутри папку ansible.
+
+Для установки и регистрации раннера на виртуальных машинах будем использовать роль из ansible-galaxy `riemers.gitlab-runner`. Создадим файл requirements.yml в котором опишем используемую роль.
+
+Теперь достаточно выполнить команду
+
+``` shell
+asible-galaxy install -r requiements.yml
+```
+Для установки роли.
+
+Создадим папку playbooks, а в ней файл gitlab-runner.yml в котором опишем установку раннера через используемую роль. Переменные, которые описывают усановку и регистрацию ранера поместим в файл `vars/gitlab-runner.yml`
+
+Теперь для установки и регистрации раннера на хосты, нам достаточно выполнить команду:
+
+```shell
+ansible-playbook playbooks/gitlab-runner.yml
+```
+
+### Интеграция pipeline со slack (*)
+
+Переходим по ссылке: https://devops-team-otus.slack.com/apps/A0F7XDUAZ-incoming-webhooks?next_id=0
+
+Нажимаем кнопку **Add Configuration**. Выбираем свой канал и нажимаем на кнопку **Add Intergration**. Копируем ссылку из поля **Webhook URL**. Нажимаем **Save Settings**.
+
+Теперь идем в гитбал в проект settings -> integration и находим там пункт **slack notification**.
+Чекаем Active. В поле Webhook вставляем скопированную ссылку. В поле Username пишем Gitlab. Снимаем галочку "Notify only default branch". Можно так же снять "Notify only broken pipelines". В списке оставляем с галочками только то, что нам нужно и указываем канал.
+
+Сохраняемся и ... PROFIT!!
+
+[Канал с интеграцией](https://devops-team-otus.slack.com/messages/CK8QN21S6)
+
+----
 ## Homework 14 (docker-4)
 В данном домашнем задании было сделано:
 - Работа с сетью Docker

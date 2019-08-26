@@ -37,8 +37,20 @@ variable "docker_disk_image" {
   default     = "docker-base"
 }
 
+variable "docker_disk_size" {
+  type = "string"
+  description = "Boot disk size"
+  default = "10"
+}
+
 variable "instance_count" {
   type        = "string"
   description = "Count instances"
   default     = "1"
+}
+
+variable "enable_web_traffic" {
+  type = "string"
+  description = "Create http/https firewall rules and map to instance or not"
+  default = "false"
 }
