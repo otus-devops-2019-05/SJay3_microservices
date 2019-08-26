@@ -5,6 +5,60 @@ SJay3 microservices repository
 
 ## Homewokr 16 (monitoring-1)
 В данном домашнем задании было сделано:
+- Запуск prometheus в контейнере
+- Упорядочивание репозитория
+- Сборка собственного образа prometheus
+
+### Запуск prometheus в контейнере
+
+Перед запуском прометеуса подготовим окружение.
+Необходимо добавить правила фаервола в GCP и создать ВМ с докером через docker-machine (если она еще не была создана).
+
+Правила фаервола:
+
+```shell
+gcloud compute firewall-rules create prometheus-default --allow tcp:9090
+gcloud compute firewall-rules create puma-default --allow tcp:9292
+```
+
+Создание ВМ
+
+```shell
+export GOOGLE_PROJECT=docker-248611
+
+# create docker host
+docker-machine create --driver google \
+    --google-machine-image https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1604-lts \
+    --google-machine-type n1-standard-1 \
+    --google-zone europe-west1-b \
+    docker-host
+```
+
+Подключаемся к удаленному хосту через докер-машин
+
+```shell
+eval $(docker-machine env docker-host)
+```
+
+Запустим прометеус в контейнере. Будем использовать уже готовый образ с докер-хаба
+
+```shell
+docker run --rm -p 9090:9090 -d --name prometheus  prom/prometheus
+```
+
+Ознакомимся с основными элементами web-интерфейса прометеуса и остановим контейнер командой:
+
+```shell
+docker stop prometheus
+```
+
+### Упорядочивание репозитория
+
+Приведем структуру каталогов в более удобный и четки вид. Для этого, создадим папку **docker** в корне репозитория и перенесем туда директорию **docker-monolith**, а так же все docker-compose и `.env` файлы из директории **src**. Так же удалим все инструкции *build* из файле `docker-compose.yml`
+
+В корне репозитория создадим папку **monitoring**, в которой будем хранить все, что связано с мониторингом.
+
+### Сборка собственного образа prometheus
 
 
 ----
