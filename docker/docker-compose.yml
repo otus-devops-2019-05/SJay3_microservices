@@ -11,7 +11,10 @@ services:
     ports:
       - ${UI_PORT}:9292/tcp
     networks:
-      - reddit_front
+      reddit_front:
+        aliases:
+          - post_db
+          - comment_db
   post:
     image: ${USERNAME}/post:${POST_VERSION}
     networks:
