@@ -3,6 +3,8 @@ SJay3 microservices repository
 
 [![Build Status](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices.svg?branch=master)](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices)
 
+[Докер-хаб](https://hub.docker.com/u/sjotus)
+
 ## Homewokr 16 (monitoring-1)
 В данном домашнем задании было сделано:
 - Запуск prometheus в контейнере
@@ -10,6 +12,7 @@ SJay3 microservices repository
 - Сборка собственного образа prometheus
 - Оркестрация через docker-compose и сбор метрик
 - Использование exporters
+- Мониторинг MongoDb (*)
 
 ### Запуск prometheus в контейнере
 
@@ -116,11 +119,28 @@ scrape_configs:
 И пересоберем контейнер с прометеусом:
 
 ```shell
-export $USER_NAME=sjotus
+export USER_NAME=sjotus
 cd monitoring/prometheus && docker build -t $USER_NAME/prometheus .
 ```
 
+### Мониторинг MongoDb (*)
 
+В качестве экспортера для монги будем использовать [экспортер от перконы](https://github.com/percona/mongodb_exporter).
+
+Сделаем следующее:
+
+```shell
+mkdir -p monitoring/exporters
+cd monitoring/exporters
+git clone https://github.com/percona/mongodb_exporter && rm -rf mongodb_exporter/.git
+
+```
+
+Далее перейдем в директорию mongodb_exporter и соберем докер-образ
+
+```shell
+cd mongodb_exporter && make docker
+```
 
 ----
 ## Homewokr 15 (gitlab-ci-1)
