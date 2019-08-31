@@ -67,6 +67,19 @@ services:
           - mongodb-exporter
       reddit_back:
 
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.14.0
+    ports:
+      - '9115:9115'
+    volumes:
+      - '../monitoring/exporters/blackbox-exporter:/config'
+    command:
+      - '--config.file=/config/blackbox.yml'
+    networks:
+      - prometheus
+      - reddit_front
+      - reddit_back
+
 volumes:
   post_db:
   prometheus_data:
