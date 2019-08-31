@@ -56,6 +56,17 @@ services:
     networks:
       - prometheus
 
+  mongodb-exporter:
+    image: sjotus/mongodb-exporter
+    command:
+      - '--mongodb.uri=mongodb://post_db'
+      - '--collect.database'
+    networks:
+      prometheus:
+        aliases:
+          - mongodb-exporter
+      reddit_back:
+
 volumes:
   post_db:
   prometheus_data:

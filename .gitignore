@@ -15,3 +15,6 @@ docker-monolith/infra/ansible/ubuntu-xenial-16.04-cloudimg-console.log
 riemers.gitlab-runner
 ubuntu-xenial-16.04-cloudimg-console.log
 
+# exclude mongodb-exporter repo
+monitoring/exporters/mongodb-exporter/.*
+monitoring/exporters/mongodb-exporter/
