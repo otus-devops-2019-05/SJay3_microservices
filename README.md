@@ -132,14 +132,53 @@ cd monitoring/prometheus && docker build -t $USER_NAME/prometheus .
 ```shell
 mkdir -p monitoring/exporters
 cd monitoring/exporters
-git clone https://github.com/percona/mongodb_exporter && rm -rf mongodb_exporter/.git
-
 ```
 
-Далее перейдем в директорию mongodb_exporter и соберем докер-образ
+Добавим в .gitignore будущий репозиторий с экспортером для монги:
+
+```
+# exclude mongodb-exporter repo
+monitoring/exporters/mongodb-exporter/.*
+monitoring/exporters/mongodb-exporter/
+```
+
+Напишем скрипт `mongodb_exporter.sh`, который будет клонировать репозиторий с экспортером монги, собирать докер-образ экспортера и пушить его в наш докер-хаб.
+
+Теперь залогинимся в докер хаб и запустим шелл скрипт.
 
 ```shell
-cd mongodb_exporter && make docker
+docker login
+./mongodb_exporter.sh
+```
+
+Добавим новый таргет в конфигурацию прометеуса (`monitoring/prometheus/prometheus.yml`) и пересоберем образ.
+
+```yaml
+  - job_name: 'mongo'
+    static_configs:
+      - targets:
+        - 'mongodb-exporter:9216'
+```
+
+Добавим в наш докер-композ файл (`docker/docker-compose.yml`) сервис mongodb-exporter:
+
+```yaml
+  mongodb-exporter:
+    image: sjotus/mongodb-exporter
+    command:
+      - '--mongodb.uri=mongodb://post_db'
+      - '--collect.database'
+    networks:
+      prometheus:
+        aliases:
+          - mongodb-exporter
+      reddit_back:
+```
+
+Остается только запустить и проверить, что таргет в состоянии UP и метрики собираются
+
+```shell
+cd docker && docker-compose -f docker-compose.yml up -d
 ```
 
 ----
