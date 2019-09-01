@@ -12,7 +12,16 @@ SJay3 microservices repository
 ### Мониторинг докер-контейнеров
 Структурируем докер-композ файл. Оставим в стандартном файле только запуск приложений, а все, что касается мониторинга вынесем в файле `docker-compose-monitoring.yml`.
 
+Добавим в docker-compose-monitoring.yml экспортер для наблюдения за состоянием наших контейнеров [cAdvisor](https://github.com/google/cadvisor). Так же добавим информацию о сервисе в prometheus.yml, после чего пересоберем контейнер с прометеусом.
 
+```yaml
+- job_name: 'cadvisor'
+  static_configs:
+    - targets:
+      - 'cadvisor:8080'
+```
+
+Не забудем так же добавить правило фаервола в GCP для порта 8080
 
 ## Homewokr 16 (monitoring-1)
 В данном домашнем задании было сделано:
