@@ -40,3 +40,5 @@ push-comment:
 # пуш прометеуса в докер-хаб
 push-prom:
 	docker push $(DOCKER_REGISTRY)/prometheus
+
+.PHONY: all prometheus-all reddit-micro comment post ui prometheus mongodb-exporter push push-reddit-micro push-ui push-post push-comment push-prom
