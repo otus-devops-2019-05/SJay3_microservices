@@ -13,6 +13,7 @@ SJay3 microservices repository
 - Оркестрация через docker-compose и сбор метрик
 - Использование exporters
 - Мониторинг MongoDb (*)
+- Мониторинг сервисов с помощью Blackbox exporter (*)
 
 ### Запуск prometheus в контейнере
 
@@ -180,6 +181,56 @@ docker login
 ```shell
 cd docker && docker-compose -f docker-compose.yml up -d
 ```
+
+### Мониторинг сервисов с помощью Blackbox exporter (*)
+
+[Blackbox exporter](https://github.com/prometheus/blackbox_exporter)
+
+Добавим сервис blackbox-exporter в докер-композ файл:
+
+```yaml
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.14.0
+    ports:
+      - '9115:9115'
+    # volumes:
+    #   - '../monitoring/exporters/blackbox-exporter:/config'
+    # command:
+    #   - '--config.file=/config/blackbox.yml'
+    networks:
+      - prometheus
+      - reddit_front
+      - reddit_back
+```
+
+А данном задании мы будем использовать только один модуль в экспортере для проверки статус-кодов http 2xx. Для продакшн-реди решения необходимо подключать вольюм и указывать заранее подготовленный конфиг-файл в данном вольюме (закомментированные строки в файле docker-compose.yml).
+
+В разделе networks укажем все сети из которых должен быть видет экспортер для сборка метрик и взаимодействия с прометеусом.
+
+**P.S.** Не смог разобраться, почему экспортер в итоге не видит сервисов post и comment. Возможно проблема с портами или алиасами...
+
+Теперь добавим в prometheus.yml конфигурацию blackbox-exporter. Данный экпортер работает по указанным в конфиге таргетам, поэтому для сбора метрик с разных сервисов одним экспортеторм, необходимо заменить стандартные лейблы.
+
+```yaml
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - 'ui:9292'
+        - 'comment:9292'
+        - 'post:5000'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+```
+
+
 
 ----
 ## Homewokr 15 (gitlab-ci-1)
