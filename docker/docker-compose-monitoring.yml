@@ -1,0 +1,67 @@
+version: 3.5
+services:
+  prometheus:
+    image: ${USERNAME}/prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention=1d'
+    networks:
+      - reddit_front
+      - reddit_back
+      - prometheus
+
+  node-exporter:
+    image: prom/node-exporter:v0.15.2
+    user: root
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
+    networks:
+      - prometheus
+
+  mongodb-exporter:
+    image: ${USERNAME}/mongodb-exporter
+    command:
+      - '--mongodb.uri=mongodb://post_db'
+      - '--collect.database'
+    networks:
+      prometheus:
+        aliases:
+          - mongodb-exporter
+      reddit_back:
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.14.0
+    ports:
+      - '9115:9115'
+    # volumes:
+    #   - '../monitoring/exporters/blackbox-exporter:/config'
+    # command:
+    #   - '--config.file=/config/blackbox.yml'
+    networks:
+      - prometheus
+      - reddit_front
+      - reddit_back
+volumes:
+  prometheus_data:
+
+networks:
+  prometheus:
+    name: prometheus_net
+    driver: bridge
+  reddit_front:
+    name: reddit_front_net
+    driver: bridge
+  reddit_back:
+    name: reddit_back_net
+    driver: bridge
