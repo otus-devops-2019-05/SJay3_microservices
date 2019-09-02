@@ -126,11 +126,16 @@ alerting:
 Теперь остается только пересобрать образ прометеуса и пересоздать инфраструктуру:
 
 ```shell
+export USER_NAME=sjotus
 make prometheus-all
 cd docker
 docker-compose -f docker-compose-monitoring.yml down
 docker-compose -f docker-compose-monitoring.yml up -d
 ```
+
+Проверим, что правило отображается в прометеусе на вкладке Alerts.
+
+Проверим работу алертинга остановив один из сервисов. В канал в слаке должно будет прийти уведомление.
 
 ----
 ## Homewokr 16 (monitoring-1)
