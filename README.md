@@ -153,11 +153,11 @@ docker-machine ssh
 sudo vim /etc/docker/daemon.json
 ```
 
-В файле daemon.json
+В файле daemon.json (конфигурация только для тестирования. В Продакшене в GCP не стоит её использовать)
 
 ```json
 {
-  "metrics-addr" : "127.0.0.1:9323",
+  "metrics-addr" : "0.0.0.0:9323",
   "experimental" : true
 }
 ```
@@ -174,7 +174,7 @@ sudo systemctl restart docker.service
 ...
   - job_name: 'docker'
     static_configs:
-      - targets: ['localhost:9323']
+      - targets: ['<docker-host_ip>:9323']
 ```
 
 Пересоберем прометеус и запустим инфраструктуру:
