@@ -3,6 +3,271 @@ SJay3 microservices repository
 
 [![Build Status](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices.svg?branch=master)](https://travis-ci.com/otus-devops-2019-05/SJay3_microservices)
 
+[Докер-хаб](https://hub.docker.com/u/sjotus)
+
+## Homewokr 16 (monitoring-1)
+В данном домашнем задании было сделано:
+- Запуск prometheus в контейнере
+- Упорядочивание репозитория
+- Сборка собственного образа prometheus
+- Оркестрация через docker-compose и сбор метрик
+- Использование exporters
+- Мониторинг MongoDb (*)
+- Мониторинг сервисов с помощью Blackbox exporter (*)
+- Использование make для сборки образов (*)
+
+### Запуск prometheus в контейнере
+
+Перед запуском прометеуса подготовим окружение.
+Необходимо добавить правила фаервола в GCP и создать ВМ с докером через docker-machine (если она еще не была создана).
+
+Правила фаервола:
+
+```shell
+gcloud compute firewall-rules create prometheus-default --allow tcp:9090
+gcloud compute firewall-rules create puma-default --allow tcp:9292
+```
+
+Создание ВМ
+
+```shell
+export GOOGLE_PROJECT=docker-248611
+
+# create docker host
+docker-machine create --driver google \
+    --google-machine-image https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1604-lts \
+    --google-machine-type n1-standard-1 \
+    --google-zone europe-west1-b \
+    docker-host
+```
+
+Подключаемся к удаленному хосту через докер-машин
+
+```shell
+eval $(docker-machine env docker-host)
+```
+
+Запустим прометеус в контейнере. Будем использовать уже готовый образ с докер-хаба
+
+```shell
+docker run --rm -p 9090:9090 -d --name prometheus  prom/prometheus
+```
+
+Ознакомимся с основными элементами web-интерфейса прометеуса и остановим контейнер командой:
+
+```shell
+docker stop prometheus
+```
+
+### Упорядочивание репозитория
+
+Приведем структуру каталогов в более удобный и четки вид. Для этого, создадим папку **docker** в корне репозитория и перенесем туда директорию **docker-monolith**, а так же все docker-compose и `.env` файлы из директории **src**. Так же удалим все инструкции *build* из файле `docker-compose.yml`
+
+В корне репозитория создадим папку **monitoring**, в которой будем хранить все, что связано с мониторингом.
+
+### Сборка собственного образа prometheus
+
+Создадим внутри директории **monitoring** диреткорию **prometheus**, внутри которой создадим **Dockerfile**
+
+```Dockerfile
+FROM prom/prometheus:v2.1.0
+ADD prometheus.yml /etc/prometheus/
+```
+
+И далее рядом создадим файл конфигурации `prometheus.yml`
+
+Теперь все готово для сборки образа
+
+```shell
+export USER_NAME=<docker_hub_login>
+docker build -t $USER_NAME/prometheus .
+```
+
+### Оркестрация через docker-compose и сбор метрик
+У нас уже есть докер-композ файл для поднятия наших сервисов, поэтому нам необходимо подключить туда поднятие прометеуса.
+
+Но для начала пересоберем все образы наших сервисов через скрипт `docker_build.sh`, который находится в директории каждого сервиса в каталоге src.
+
+Скрипт для сборки всего из корня репозтория
+
+```shell
+for i in ui post-py comment; do cd src/$i; bash
+docker_build.sh; cd -; done
+```
+
+Теперь добавим в файл `docker/docker-compose.yml` информацию о сервисе с прометеусом.
+
+Проверим, что для сервиса базы данных установленны все алиасы (необходимо, что бы другие сервисы могли обращаться к сервису базы данных)
+
+Теперь мы можем подключиться к прометеусу и посмотреть метрики. Зайдем по адресу `http://<docker-host-ip>:9090` посмотрим на метрики `ui_healht`, `ui_health_comment_availability` и `ui_health_post_availability` и убедимся что прометеус собирает метрики с наших сервисов.
+
+### Использование exporters
+Экспортер похож на вспомогательного агента для сбора метрик.
+В ситуациях, когда мы не можем реализовать отдачу метрик Prometheus в коде приложения, мы можем использовать экспортер, который будет транслировать метрики приложения или системы в формате доступном для чтения Prometheus.
+
+Настроим сбор метрик с докер-хоста. Для этого воспользуемся экспортером [Node exporter](https://github.com/prometheus/node_exporter). Экспортер будем так же запускать в контейнере, поэтому добавим его как сервис в docker-compose файл. Так же создадим дополнительную сеть prometheus_net, к которой подключим прометеус и наш экспортер.
+
+В конфиг прометеуса (prometheus.yml) добавим еще одну джобу, что бы прометеус следил за экспортером
+
+```yaml
+scrape_configs:
+...
+  - job_name: 'node'
+    static_configs:
+      - targets:
+        - 'node-exporter:9100'
+```
+
+И пересоберем контейнер с прометеусом:
+
+```shell
+export USER_NAME=sjotus
+cd monitoring/prometheus && docker build -t $USER_NAME/prometheus .
+```
+
+### Мониторинг MongoDb (*)
+
+В качестве экспортера для монги будем использовать [экспортер от перконы](https://github.com/percona/mongodb_exporter).
+
+Сделаем следующее:
+
+```shell
+mkdir -p monitoring/exporters
+cd monitoring/exporters
+```
+
+Добавим в .gitignore будущий репозиторий с экспортером для монги:
+
+```
+# exclude mongodb-exporter repo
+monitoring/exporters/mongodb-exporter/.*
+monitoring/exporters/mongodb-exporter/
+```
+
+Напишем скрипт `mongodb_exporter.sh`, который будет клонировать репозиторий с экспортером монги, собирать докер-образ экспортера и пушить его в наш докер-хаб.
+
+Теперь залогинимся в докер хаб и запустим шелл скрипт.
+
+```shell
+docker login
+./mongodb_exporter.sh
+```
+
+Добавим новый таргет в конфигурацию прометеуса (`monitoring/prometheus/prometheus.yml`) и пересоберем образ.
+
+```yaml
+  - job_name: 'mongo'
+    static_configs:
+      - targets:
+        - 'mongodb-exporter:9216'
+```
+
+Добавим в наш докер-композ файл (`docker/docker-compose.yml`) сервис mongodb-exporter:
+
+```yaml
+  mongodb-exporter:
+    image: sjotus/mongodb-exporter
+    command:
+      - '--mongodb.uri=mongodb://post_db'
+      - '--collect.database'
+    networks:
+      prometheus:
+        aliases:
+          - mongodb-exporter
+      reddit_back:
+```
+
+Остается только запустить и проверить, что таргет в состоянии UP и метрики собираются
+
+```shell
+cd docker && docker-compose -f docker-compose.yml up -d
+```
+
+### Мониторинг сервисов с помощью Blackbox exporter (*)
+
+[Blackbox exporter](https://github.com/prometheus/blackbox_exporter)
+
+Добавим сервис blackbox-exporter в докер-композ файл:
+
+```yaml
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.14.0
+    ports:
+      - '9115:9115'
+    # volumes:
+    #   - '../monitoring/exporters/blackbox-exporter:/config'
+    # command:
+    #   - '--config.file=/config/blackbox.yml'
+    networks:
+      - prometheus
+      - reddit_front
+      - reddit_back
+```
+
+А данном задании мы будем использовать только один модуль в экспортере для проверки статус-кодов http 2xx. Для продакшн-реди решения необходимо подключать вольюм и указывать заранее подготовленный конфиг-файл в данном вольюме (закомментированные строки в файле docker-compose.yml).
+
+В разделе networks укажем все сети из которых должен быть видет экспортер для сборка метрик и взаимодействия с прометеусом.
+
+**P.S.** Не смог разобраться, почему экспортер в итоге не видит сервисов post и comment. Возможно проблема с портами или алиасами...
+
+Теперь добавим в prometheus.yml конфигурацию blackbox-exporter. Данный экпортер работает по указанным в конфиге таргетам, поэтому для сбора метрик с разных сервисов одним экспортеторм, необходимо заменить стандартные лейблы.
+
+```yaml
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - 'ui:9292'
+        - 'comment:9292'
+        - 'post:5000'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+```
+
+### Использование make для сборки образов (*)
+
+Для сборки образов через команду make, необходимо создать Makefile в корне репозитория. Этот файл должен удовлетворять условиям:
+
+- сборка микросервисов из папки src
+- сборка прометеуса monitoring/prometheus
+- сборка экспортера для монги
+- Пуш в докер-хаб образа прометеуса
+- Пуш в докер-хаб образов микросервисов из папки src
+
+Перед выполнением команды make, необходимо определить переменную `USER_NAME`, которая отвечает за идентификацию пользователя, зарегистрированного в докер-хабе и именование образов. Так же, следует выполнить `docker login` для авторизации на докер-хабе
+
+```shell
+export USER_NAME=sjotus
+docker login
+```
+
+Использование make:
+
+```shell
+# Собрать все образы (прометеус, экспортер, образы микросервисов)
+make
+# Запушить образы на докер-хаб (из-за особенности скрипта mongodb-exporter пушится в докер-хаб при сборке)
+make push
+
+# Собрать только образы микросервисов
+make reddit-micro
+# запушить микросервисы в докер-хаб
+make push-reddit-micro
+
+# Собрать прометеус и экспортер
+make prometheus-all
+# Запушить прометеус
+make push-prom
+```
+
+----
 ## Homewokr 15 (gitlab-ci-1)
 В данном домашнем задании было сделано:
 - Установка Gitlab в докере
