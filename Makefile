@@ -15,7 +15,7 @@ post:
 ui:
 	cd src/ui && /bin/bash docker_build.sh
 
-prometheus-all: prometheus mongodb-exporter
+prometheus-all: prometheus mongodb-exporter alertmanager
 
 prometheus:
 	cd monitoring/prometheus && docker build -t $(DOCKER_REGISTRY)/prometheus .
@@ -23,8 +23,11 @@ prometheus:
 mongodb-exporter:
 	cd monitoring/exporters && /bin/bash mongodb_exporter.sh
 
+alertmanager:
+	cd monitoring/alertmanager && docker build -t $(DOCKER_REGISTRY)/alertmanager .
+
 # mongodb-exporter пушится в докер-хаб скриптом сразу после сборки
-push: push-prom push-reddit-micro
+push: push-prom push-reddit-micro push-alert
 
 push-reddit-micro: push-comment push-post push-ui
 
@@ -41,4 +44,7 @@ push-comment:
 push-prom:
 	docker push $(DOCKER_REGISTRY)/prometheus
 
-.PHONY: all prometheus-all reddit-micro comment post ui prometheus mongodb-exporter push push-reddit-micro push-ui push-post push-comment push-prom
+push-alert:
+	docker push $(DOCKER_REGISTRY)/alert
+
+.PHONY: all prometheus-all reddit-micro comment post ui prometheus mongodb-exporter alertmanager push push-reddit-micro push-ui push-post push-comment push-prom push-alert

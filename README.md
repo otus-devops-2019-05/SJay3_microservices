@@ -10,6 +10,7 @@ SJay3 microservices repository
 - Мониторинг докер-контейнеров
 - Визуализация метрик через Grafana
 - Мониторинг работы приложений
+- Алертинг
 
 ### Мониторинг докер-контейнеров
 Структурируем докер-композ файл. Оставим в стандартном файле только запуск приложений, а все, что касается мониторинга вынесем в файле `docker-compose-monitoring.yml`.
@@ -47,7 +48,26 @@ SJay3 microservices repository
 
 
 ### Мониторинг работы приложений
-Добавим в конфиг прометеуса информацию о сервисе post. После чего пересоберем образ прометеуса
+Добавим в конфиг прометеуса информацию о сервисе post. После чего пересоберем образ прометеуса.
+
+Добавим в графане 3 дашборда:
+- DockerMonitoring
+- UI_Service_Monitoring
+- Business_Logic_Monitoring
+
+### Алертинг
+Для организации алертинга будем использовать дополнительный компонент для прометеуса *Alertmanager*
+
+Создадим директорию `monitoring/alertmanager` в которой создадим Dockerfile:
+
+```dockerfile
+FROM prom/alertmanager:v0.14.0
+ADD config.yml /etc/alertmanager/
+```
+
+Создадим в директории alertmanager файл config.yml в котором опишем конфигурацию aleermanager.
+
+В секции global определим параметр `slack_api_url` в котором определим url к апи слака выданого плагином Incoming Webhook
 
 ----
 ## Homewokr 16 (monitoring-1)
