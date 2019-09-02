@@ -45,6 +45,6 @@ push-prom:
 	docker push $(DOCKER_REGISTRY)/prometheus
 
 push-alert:
-	docker push $(DOCKER_REGISTRY)/alert
+	docker push $(DOCKER_REGISTRY)/alertmanager
 
 .PHONY: all prometheus-all reddit-micro comment post ui prometheus mongodb-exporter alertmanager push push-reddit-micro push-ui push-post push-comment push-prom push-alert
