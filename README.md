@@ -168,6 +168,8 @@ sudo vim /etc/docker/daemon.json
 sudo systemctl restart docker.service
 ```
 
+Не забудем в фаерволе GCP отрыть порт 9323.
+
 Далее в конфиге prometheus.yml добавим:
 
 ```yaml
