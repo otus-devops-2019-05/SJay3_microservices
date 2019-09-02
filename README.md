@@ -67,7 +67,70 @@ ADD config.yml /etc/alertmanager/
 
 Создадим в директории alertmanager файл config.yml в котором опишем конфигурацию aleermanager.
 
-В секции global определим параметр `slack_api_url` в котором определим url к апи слака выданого плагином Incoming Webhook
+В секции global определим параметр `slack_api_url` в котором определим url к апи слака выданого плагином Incoming Webhook.
+
+Соберем образ алертменеджера. Для удобства, можно добавить сборку и пуш в Makefile.
+
+Добавим в докер-композ файл наш новый сервис:
+
+```yaml
+  alertmanager:
+    image: ${USER_NAME}/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+    ports:
+      - 9093:9093
+    networks:
+      - prometheus
+```
+
+Не забудем так же открыть порт 9093 в GCP для доступа к веб-интерфейсу алертменеджера.
+
+Условия, при которых будет срабатывать алертинг, поместим в файл `monitoring/prometheus/alerts.yml`
+
+```yaml
+groups:
+  - name: alert.rules
+    rules:
+    - alert: InstanceDown
+      expr: up == 0
+      for: 1m
+      labels:
+        severity: page
+      annotations:
+        description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute'
+        summary: 'Instance {{ $labels.instance }} down'
+```
+
+Теперь обновим докер-файл прометеуса добавив в него копирование файла alerts
+
+```Dockerfile
+...
+ADD alerts.yml /etc/prometheus/
+```
+
+Так же в конфиг прометеуса добавим информацию о правилах и местонахождение алертменеджера:
+
+```yaml
+rule_files:
+  - "alerts.yml"
+
+alerting:
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets:
+      - "alertmanager:9093"
+```
+
+Теперь остается только пересобрать образ прометеуса и пересоздать инфраструктуру:
+
+```shell
+make prometheus-all
+cd docker
+docker-compose -f docker-compose-monitoring.yml down
+docker-compose -f docker-compose-monitoring.yml up -d
+```
 
 ----
 ## Homewokr 16 (monitoring-1)
