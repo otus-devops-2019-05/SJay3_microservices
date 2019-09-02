@@ -1,6 +1,8 @@
 # сборка и пушинг докер образов
 # Имя пользователя на докер-хабе
 DOCKER_REGISTRY = $(USER_NAME)
+# Тегирование образов
+IMAGE_TAG = $(TAG)
 
 all: reddit-micro prometheus-all
 
@@ -46,5 +48,12 @@ push-prom:
 
 push-alert:
 	docker push $(DOCKER_REGISTRY)/alertmanager
+# тегирование всех образов. Необходимо определить переменную $TAG
+tag:
+	for var in $(docker images $(DOCKER_REGISTRY)/*:latest \
+		--format "{{.Repository}}"); do \
+	docker tag $var $var:$(IMAGE_TAG); \
+	done;
+
 
 .PHONY: all prometheus-all reddit-micro comment post ui prometheus mongodb-exporter alertmanager push push-reddit-micro push-ui push-post push-comment push-prom push-alert
