@@ -50,9 +50,9 @@ push-alert:
 	docker push $(DOCKER_REGISTRY)/alertmanager
 # тегирование всех образов. Необходимо определить переменную $TAG
 tag:
-	for var in $(docker images $(DOCKER_REGISTRY)/*:latest \
+	for var in $$(docker images $(DOCKER_REGISTRY)/*:latest \
 		--format "{{.Repository}}"); do \
-	docker tag $var $var:$(IMAGE_TAG); \
+	docker tag $$var $$var:$(IMAGE_TAG); \
 	done;
 
 
