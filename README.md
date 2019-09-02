@@ -146,6 +146,43 @@ docker-compose -f docker-compose-monitoring.yml up -d
 #### Сбор метрик прометеусом с докера
 В докере в экспериментальном режиме реализована отдача метрик в прометеус ([ссылка](https://docs.docker.com/config/thirdparty/prometheus/))
 
+Для начала необходимо включить метрики в докере.
+
+```shell
+docker-machine ssh
+sudo vim /etc/docker/daemon.json
+```
+
+В файле daemon.json
+
+```json
+{
+  "metrics-addr" : "127.0.0.1:9323",
+  "experimental" : true
+}
+```
+
+И перезапусим докер.
+
+```shell
+sudo systemctl restart docker.service
+```
+
+Далее в конфиге prometheus.yml добавим:
+
+```yaml
+...
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323']
+```
+
+Пересоберем прометеус и запустим инфраструктуру:
+
+```shell
+make prometheus
+cd docker && docker-compose -f docker-compose-monitoring.yml up -d
+```
 
 
 ----
