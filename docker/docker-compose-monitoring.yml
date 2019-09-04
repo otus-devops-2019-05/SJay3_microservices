@@ -65,6 +65,13 @@ services:
     networks:
       - prometheus
 
+  telegraf:
+    image: ${USERNAME}/telegraf
+    networks:
+      - prometheus
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
   grafana:
     image: grafana/grafana:5.0.0
     volumes:
