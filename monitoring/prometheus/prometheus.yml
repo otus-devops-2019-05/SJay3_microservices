@@ -57,7 +57,7 @@ scrape_configs:
 
   - job_name: 'docker'
     static_configs:
-      - targets: ['35.187.108.10:9323']
+      - targets: ['104.199.19.73:9323']
 
 rule_files:
   - "alerts.yml"
