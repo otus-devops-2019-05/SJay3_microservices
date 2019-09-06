@@ -12,6 +12,7 @@ SJay3 microservices repository
 - Мониторинг работы приложений
 - Алертинг
 - Задания со *
+- Задания с **
 
 ### Мониторинг докер-контейнеров
 Структурируем докер-композ файл. Оставим в стандартном файле только запуск приложений, а все, что касается мониторинга вынесем в файле `docker-compose-monitoring.yml`.
@@ -231,9 +232,18 @@ cd docker && docker-compose -f docker-compose-monitoring.yml up -d
 
 Отредактируем конфиг алертменеджера (config.yml) добавив туда отправку на наш тестовый почтовый ящик.
 
-```yaml
+### Задания с **
+#### Автоматическое добавление датасорсов и дашбордов в графану
 
-```
+Согласно [документации](https://grafana.com/docs/administration/provisioning/) в директории `/etc/grafana` необходимо создать диреторию `provisioning` а внутри каталоги datasources и dashboards для датасорсов и дашбордов соответсвенно. 
+
+Путь к директории можно изменить в конфигурационном файле. [Документация](https://grafana.com/docs/installation/configuration/#provisioning)
+
+Для начала опишем конфигурацию датасорсов и дашбордов в виде файлов. В диретории monitoring/grafana/ Создадим директорию provisioning, а внутри директории dashboards и datasources.
+
+Файл `dashboards.yml` и `datasources.yml` будут содержать нашу конфигурацию. Поместим их в соответствующие директории.
+
+
 
 ----
 ## Homewokr 16 (monitoring-1)
