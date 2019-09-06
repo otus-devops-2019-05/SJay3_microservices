@@ -28,7 +28,7 @@ mongodb-exporter:
 alertmanager:
 	cd monitoring/alertmanager && docker build -t $(DOCKER_REGISTRY)/alertmanager .
 telegraf:
-	cd monitoring/telegraf && docker build -t $(DOCKER_REGISTRY)/telegraf .
+	cd monitoring/exporters/telegraf && docker build -t $(DOCKER_REGISTRY)/telegraf .
 
 # mongodb-exporter пушится в докер-хаб скриптом сразу после сборки
 push: push-prom push-reddit-micro push-alert push-telegraf
