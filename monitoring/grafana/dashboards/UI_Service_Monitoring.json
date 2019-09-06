@@ -152,6 +152,7 @@
       },
       "lines": true,
       "linewidth": 1,
+      "links": [],
       "nullPointMode": "null",
       "percentage": false,
       "pointradius": 5,
@@ -172,7 +173,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Panel Title",
+      "title": "Http Response time 95th percentile",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -325,5 +326,5 @@
   "timezone": "",
   "title": "UI_service_monitoring",
   "uid": "rszXEQKZz",
-  "version": 3
+  "version": 4
 }

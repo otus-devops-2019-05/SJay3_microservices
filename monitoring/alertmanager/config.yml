@@ -6,7 +6,7 @@ global:
   smtp_auth_password: 12f44a3ad43b2f
 
 route:
-  receiver: 'email-and-slacknotifications'
+  receiver: 'email-and-slack-notifications'
 
 receivers:
 - name: 'email-and-slack-notifications'
