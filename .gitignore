@@ -18,3 +18,5 @@ ubuntu-xenial-16.04-cloudimg-console.log
 # exclude mongodb-exporter repo
 monitoring/exporters/mongodb-exporter/.*
 monitoring/exporters/mongodb-exporter/
+
+gcp-stackdriver-docker-key.json

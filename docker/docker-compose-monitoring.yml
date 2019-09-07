@@ -98,12 +98,15 @@ services:
   stackdriver-exporter:
     image: frodenas/stackdriver-exporter
     environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/var/gcp-cred/gcp-stackdriver-docker-key.json
       - STACKDRIVER_EXPORTER_GOOGLE_PROJECT_ID=docker-248611
       - STACKDRIVER_EXPORTER_MONITORING_METRICS_TYPE_PREFIXES=compute.googleapis.com/instance/cpu,compute.googleapis.com/instance/disk
     ports:
       - 9255:9255
     networks:
       - prometheus
+    volumes:
+      - /var/gcp-cred:/var/gcp-cred
 
 volumes:
   prometheus_data:

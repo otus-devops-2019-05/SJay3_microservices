@@ -271,18 +271,25 @@ sudo bash install-monitoring-agent.sh
 Теперь, когда у нас есть метрики в стакдрайвере, мы можем их выгружать в прометеус.
 Будем использовать этот [экспортер](https://github.com/frodenas/stackdriver_exporter).
 
+Предварительно создадим сервисный аккаунт stckdriver и назначим ему роль monitoring Viewer.
+
+Сгенерируем ключ и сохраним его под именем gcp-stackdriver-docker-key.json на машину docker-host в предварительно созданный каталог `/var/gcp-cred/`
+
 Добавим конфигурацию стакдрайвер-экспортера в докер-композ файл:
 
 ```yaml
   stackdriver-exporter:
     image: frodenas/stackdriver-exporter
     environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/var/gcp-cred/gcp-stackdriver-docker-key.json
       - STACKDRIVER_EXPORTER_GOOGLE_PROJECT_ID=docker-248611
       - STACKDRIVER_EXPORTER_MONITORING_METRICS_TYPE_PREFIXES=compute.googleapis.com/instance/cpu,compute.googleapis.com/instance/disk
     ports:
       - 9255:9255
     networks:
       - prometheus
+    volumes:
+      - /var/gcp-cred:/var/gcp-cred
 ```
 
 В данной конфигурации он будет собирать все метрики о ЦПУ и Дисках со всех инстансов.
