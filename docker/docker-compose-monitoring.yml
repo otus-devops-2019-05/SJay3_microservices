@@ -72,6 +72,15 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 
+  trickster:
+    image: ${USERNAME}/trickster
+    ports:
+      - 9089:9089
+    depends_on:
+      - prometheus
+    networks:
+      - prometheus
+
   grafana:
     image: ${USERNAME}/grafana
     volumes:

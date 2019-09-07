@@ -17,10 +17,13 @@ post:
 ui:
 	cd src/ui && /bin/bash docker_build.sh
 
-prometheus-all: prometheus mongodb-exporter alertmanager telegraf grafana
+prometheus-all: prometheus mongodb-exporter alertmanager telegraf grafana trickster
 
 prometheus:
 	cd monitoring/prometheus && docker build -t $(DOCKER_REGISTRY)/prometheus .
+
+trickster:
+	cd monitoring/trickster && docker build -t $(DOCKER_REGISTRY)/trickster .
 
 mongodb-exporter:
 	cd monitoring/exporters && /bin/bash mongodb_exporter.sh
@@ -34,7 +37,7 @@ telegraf:
 grafana:
 	cd monitoring/grafana && docker build -t $(DOCKER_REGISTRY)/grafana .
 # mongodb-exporter пушится в докер-хаб скриптом сразу после сборки
-push: push-prom push-reddit-micro push-alert push-telegraf push-grafana
+push: push-prom push-reddit-micro push-alert push-telegraf push-grafana push-trickster
 
 push-reddit-micro: push-comment push-post push-ui
 
@@ -60,6 +63,9 @@ push-telegraf:
 push-grafana:
 	docker push $(DOCKER_REGISTRY)/grafana
 
+push-trickster:
+	docker push $(DOCKER_REGISTRY)/trickster
+
 # тегирование всех образов. Необходимо определить переменную $TAG
 tag:
 	for var in $$(docker images $(DOCKER_REGISTRY)/*:latest \
@@ -68,4 +74,4 @@ tag:
 	done;
 
 
-.PHONY: all prometheus-all reddit-micro comment post ui prometheus mongodb-exporter alertmanager push push-reddit-micro push-ui push-post push-comment push-prom push-alert push-telegraf telegraf grafana push-grafana
+.PHONY: all prometheus-all reddit-micro comment post ui prometheus mongodb-exporter alertmanager push push-reddit-micro push-ui push-post push-comment push-prom push-alert push-telegraf telegraf grafana push-grafana trickster push-trickster
