@@ -95,6 +95,16 @@ services:
     networks:
       - prometheus
 
+  stackdriver-exporter:
+    image: frodenas/stackdriver-exporter
+    environment:
+      - STACKDRIVER_EXPORTER_GOOGLE_PROJECT_ID=docker-248611
+      - STACKDRIVER_EXPORTER_MONITORING_METRICS_TYPE_PREFIXES=compute.googleapis.com/instance/cpu,compute.googleapis.com/instance/disk
+    ports:
+      - 9255:9255
+    networks:
+      - prometheus
+
 volumes:
   prometheus_data:
   grafana_data:

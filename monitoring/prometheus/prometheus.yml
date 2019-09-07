@@ -50,6 +50,11 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox-exporter:9115
 
+  - job_name: 'stackdriver'
+    static_configs:
+      - targets:
+        - 'stackdriver-exporter:9255'
+
   - job_name: 'cadvisor'
     static_configs:
       - targets:

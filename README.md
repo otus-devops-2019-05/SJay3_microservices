@@ -247,6 +247,55 @@ cd docker && docker-compose -f docker-compose-monitoring.yml up -d
 
 Не забудем добавить сборку и пуш графаны в makefile.
 
+#### Сбор метрик со stackdriver
+Stackdriver - это сервис по сбору метрик, логов и трейсов, а так же алертинг.
+
+Для сбора метрик и логов необходимо предварительно установить агентов. [quickstart](https://cloud.google.com/monitoring/quickstart-lamp)
+
+Установим агента мониторинга:
+
+```shell
+docker-mashine ssh docker-host
+curl -sSO https://dl.google.com/cloudagents/install-monitoring-agent.sh
+sudo bash install-monitoring-agent.sh
+```
+
+После этого в stackdriver будут приходить метрики. Их можно посмотреть на вкладке resources -> Metrics Explorer
+
+Базовые метрики по конкретному хосту можно увидеть зайдя в resources -> instances и выбрав конкретный инстанс.
+
+Можно организовать так же blackbox метрики. В стакдрайвер это называется Uptime Checks
+Необходимо зайти в панель мониторинга stackdriver и выбрать uptime checks -> uptime checks overwiev. В правом углу нажать на кнопку Add Uptime Check. Далее заполняем поля. Для проверки что чек работает, можно нажать на Test.
+
+
+Теперь, когда у нас есть метрики в стакдрайвере, мы можем их выгружать в прометеус.
+Будем использовать этот [экспортер](https://github.com/frodenas/stackdriver_exporter).
+
+Добавим конфигурацию стакдрайвер-экспортера в докер-композ файл:
+
+```yaml
+  stackdriver-exporter:
+    image: frodenas/stackdriver-exporter
+    environment:
+      - STACKDRIVER_EXPORTER_GOOGLE_PROJECT_ID=docker-248611
+      - STACKDRIVER_EXPORTER_MONITORING_METRICS_TYPE_PREFIXES=compute.googleapis.com/instance/cpu,compute.googleapis.com/instance/disk
+    ports:
+      - 9255:9255
+    networks:
+      - prometheus
+```
+
+В данной конфигурации он будет собирать все метрики о ЦПУ и Дисках со всех инстансов.
+
+Добавим экспортер в конфигурацию прометеуса:
+
+```yaml
+  - job_name: 'stackdriver'
+    static_configs:
+      - targets:
+        - 'stackdriver-exporter:9255'
+```
+
 
 ----
 ## Homewokr 16 (monitoring-1)
