@@ -54,7 +54,38 @@ make reddit-micro
 
 Cоздадим конфигурационный файл fluent.conf в диретории fluentd.
 
-Внесем так же информацию о сборке fluentd-образа в makefile
+Внесем так же информацию о сборке fluentd-образа в makefile и соберем образ:
+
+```shell
+make fluentd
+```
+
+#### elasticsearch
+
+При запуске эластика может возникнуть ошибка и контейнер с ним умрет:
+
+```
+max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]
+```
+
+Для исправления, необходимо поправить параметры ядра linux на хосте с докер-контейнерами:
+
+```shell
+docker-machine ssh logging
+sudo vim /etc/sysctl.conf
+```
+
+Необходимо добавить параметр:
+
+```
+vm.max_map_count = 262144
+```
+
+И применить параметры ядра:
+
+```shell
+sudo sysctl -p
+```
 
 ### Структурированные логи
 #### Предварительная подготовка
