@@ -9,6 +9,7 @@ SJay3 microservices repository
 В данном домашнем задании было сделано:
 - Подготовка окружения
 - Elastic Stack
+- Структурированные логи
 
 ### Подготовка окружения
 1. Скачаем новую версию приложения reddit и обновим его в папке /src ([ссылка](https://github.com/express42/reddit/tree/logging))
@@ -54,6 +55,39 @@ make reddit-micro
 Cоздадим конфигурационный файл fluent.conf в диретории fluentd.
 
 Внесем так же информацию о сборке fluentd-образа в makefile
+
+### Структурированные логи
+#### Предварительная подготовка
+Поменяем в `.env` файле теги образов наших микромервисов:
+
+```
+UI_VERSION=logging
+POST_VERSION=logging
+COMMENT_VERSION=logging
+```
+
+Запустим наши приложения и подключимся к сервису post для просмотра логов:
+
+```shell
+cd docker
+docker-compose -f docker-compose.yml up -d
+docker-compose logs -f post
+```
+
+#### Отправка логов в Fluentd
+Для отправки логов в fluentd будем использовать докер-драйвер [fluentd](https://docs.docker.com/config/containers/logging/fluentd/). Добавим его в докер-композ файл.
+
+```yaml
+  post:
+    ...
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.post
+```
+
+Пересоздадим инфраструктуру и поднимем инфру для логирования.
 
 ----
 ## Homework 17 (monitoring-2)
