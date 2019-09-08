@@ -7,7 +7,53 @@ SJay3 microservices repository
 
 ## Homework 18 (logging-1)
 В данном домашнем задании было сделано:
-- 
+- Подготовка окружения
+- Elastic Stack
+
+### Подготовка окружения
+1. Скачаем новую версию приложения reddit и обновим его в папке /src ([ссылка](https://github.com/express42/reddit/tree/logging))
+2. Создадим новую машину через docker-machine:
+
+```shell
+export GOOGLE_PROJECT=docker-248611
+$ docker-machine create --driver google \
+    --google-machine-image https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1604-lts \
+    --google-machine-type n1-standard-1 \
+    --google-open-port 5601/tcp \
+    --google-open-port 9292/tcp \
+    --google-open-port 9411/tcp \
+    logging
+
+# configure local env
+$ eval $(docker-machine env logging)
+
+# узнаем IP адрес
+$ docker-machine ip logging
+```
+
+3. Соберем новые образы приложений. Можно сделать это через makefile:
+
+```shell
+export USER_NAME=sjotus
+make reddit-micro
+```
+
+### Elastic Stack
+
+Поднимим центральную систему логирования на эластике. Однако, вместо стандартного для ELK logstash будем использовать fluentd (т.е. реализуем EFK стек)
+
+Создадим отдельный докер-композ файл для системы логирования. Назовем файл `docker-compose-logging.yml`
+
+Не забудем открыть в GCP порты 24224 (tcp & udp), 9200 и 5601 для наших сервисов.
+
+Создадиим в репозитории директорию logging, где будем хранить все, что связано с логированием.
+
+#### Fluentd
+В диретории logging создадим папку fluentd, где создадим простой докер-файл для нашего образа fluentd.
+
+Cоздадим конфигурационный файл fluent.conf в диретории fluentd.
+
+Внесем так же информацию о сборке fluentd-образа в makefile
 
 ----
 ## Homework 17 (monitoring-2)

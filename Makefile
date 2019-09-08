@@ -4,8 +4,10 @@ DOCKER_REGISTRY = $(USER_NAME)
 # Тегирование образов
 IMAGE_TAG = $(TAG)
 
-all: reddit-micro prometheus-all
+## BUILD SECTION
+all: reddit-micro prometheus-all logging
 
+# Reddit
 reddit-micro: comment post ui
 
 comment:
@@ -17,6 +19,7 @@ post:
 ui:
 	cd src/ui && /bin/bash docker_build.sh
 
+# MONITORING
 prometheus-all: prometheus mongodb-exporter alertmanager telegraf grafana trickster
 
 prometheus:
@@ -36,10 +39,20 @@ telegraf:
 # Grafana
 grafana:
 	cd monitoring/grafana && docker build -t $(DOCKER_REGISTRY)/grafana .
+
+# LOGGING
+logging: fluentd
+
+fluentd:
+	cd logging/fluentd && docker build -t $(DOCKER_REGISTRY)/fluentd .
+
+## PUSH SECTION
 # mongodb-exporter пушится в докер-хаб скриптом сразу после сборки
 push: push-prom push-reddit-micro push-alert push-telegraf push-grafana push-trickster
 
 push-reddit-micro: push-comment push-post push-ui
+
+push-logging: push-fluentd
 
 push-ui:
 	docker push $(DOCKER_REGISTRY)/ui
@@ -66,6 +79,10 @@ push-grafana:
 push-trickster:
 	docker push $(DOCKER_REGISTRY)/trickster
 
+push-fluentd:
+	docker push $(DOCKER_REGISTRY)/fluentd
+
+## TAG SECTION
 # тегирование всех образов. Необходимо определить переменную $TAG
 tag:
 	for var in $$(docker images $(DOCKER_REGISTRY)/*:latest \
