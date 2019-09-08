@@ -5,6 +5,11 @@ SJay3 microservices repository
 
 [Докер-хаб](https://hub.docker.com/u/sjotus)
 
+## Homework 18 (logging-1)
+В данном домашнем задании было сделано:
+- 
+
+----
 ## Homework 17 (monitoring-2)
 В данном домашнем задании было сделано:
 - Мониторинг докер-контейнеров
