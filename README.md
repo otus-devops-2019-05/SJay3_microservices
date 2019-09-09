@@ -142,6 +142,18 @@ docker-compose logs -f post
 
 Перезапустим сервис и посмотрим в kibana на неструктурированные логи.
 
+Для того, что бы распарсить такой лог, необходимо использовать регулярки. Добавми фильтр с регуляркой в fluent.conf
+
+```
+<filter service.ui>
+  @type parser
+  format /\[(?<time>[^\]]*)\]  (?<level>\S+) (?<user>\S+)[\W]*service=(?<service>\S+)[\W]*event=(?<event>\S+)[\W]*(?:path=(?<path>\S+)[\W]*)?request_id=(?<request_id>\S+)[\W]*(?:remote_addr=(?<remote_addr>\S+)[\W]*)?(?:method= (?<method>\S+)[\W]*)?(?:response_status=(?<response_status>\S+)[\W]*)?(?:message='(?<message>[^\']*)[\W]*)?/
+  key_name log
+</filter>
+```
+
+Пересоберем образ и перезапустим контейнер
+
 ----
 ## Homework 17 (monitoring-2)
 В данном домашнем задании было сделано:
