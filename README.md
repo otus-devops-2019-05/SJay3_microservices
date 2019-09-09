@@ -175,7 +175,17 @@ docker-compose logs -f post
 9])))?) #(?<pid>\b(?:[1-9][0-9]*)\b)\] *(?<loglevel>(?:DEBUG|FATAL|ERROR|WARN|INFO)) -- +(?<progname>.*?): (?<message>.*)
 ```
 
+Для полноценного парсинва будем использовать несколько grok-шаблонов. Поэтому добавим еще секцию с фильтром в конфиг fluentd
 
+```
+<filter service.ui>
+  @type parser
+  format grok
+  grok_pattern service=%{WORD:service} \| event=%{WORD:event} \| request_id=%{GREEDYDATA:request_id} \| message='%{GREEDYDATA:message}'
+  key_name message
+  reserve_data true
+</filter>
+```
 
 ----
 ## Homework 17 (monitoring-2)
