@@ -1,0 +1,16 @@
+global:
+  slack_api_url: 'https://hooks.slack.com/services/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'
+  smtp_from: 'alert@example.com'
+  smtp_smarthost: 'smtp.mailtrap.io:2525'
+  smtp_auth_username: '7a74292904a936'
+  smtp_auth_password: '12f44a3ad43b2f'
+
+route:
+  receiver: 'email-and-slack-notifications'
+
+receivers:
+- name: 'email-and-slack-notifications'
+  slack_configs:
+  - channel: '#dmitriy_usachev'
+  email_configs:
+  - to: 'sjotus@gmail.com'

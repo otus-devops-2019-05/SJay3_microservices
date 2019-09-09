@@ -1,0 +1,9 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus Server
+    isDefault: true
+    type: prometheus
+    access: proxy
+    url: http://trickster:9089
+    editable: true

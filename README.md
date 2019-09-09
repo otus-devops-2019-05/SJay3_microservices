@@ -5,6 +5,333 @@ SJay3 microservices repository
 
 [Докер-хаб](https://hub.docker.com/u/sjotus)
 
+## Homework 17 (monitoring-2)
+В данном домашнем задании было сделано:
+- Мониторинг докер-контейнеров
+- Визуализация метрик через Grafana
+- Мониторинг работы приложений
+- Алертинг
+- Задания со *
+- Задания с **
+- Задания с ***
+
+### Мониторинг докер-контейнеров
+Структурируем докер-композ файл. Оставим в стандартном файле только запуск приложений, а все, что касается мониторинга вынесем в файле `docker-compose-monitoring.yml`.
+
+Добавим в docker-compose-monitoring.yml экспортер для наблюдения за состоянием наших контейнеров [cAdvisor](https://github.com/google/cadvisor). Так же добавим информацию о сервисе в prometheus.yml, после чего пересоберем контейнер с прометеусом.
+
+```yaml
+- job_name: 'cadvisor'
+  static_configs:
+    - targets:
+      - 'cadvisor:8080'
+```
+
+Не забудем так же добавить правило фаервола в GCP для порта 8080
+
+### Виизуализация метрик через Grafana
+Для визуализации метрик будем использовать Grafana.
+
+Добави графану как сервис в docker-compose-monitoring.yml. Не забудем добавить правило фаервола в GCP на открытие порта 3000 что бы можно было зайти в графану.
+
+Откроем графану по адресу http:\\<docker-host_ip>:3000. В качестве логина и пароля выступают значения переменных окружения, которые мы задали в докер-композ файле: `GF_SECURITY_ADMIN_USER` и `GF_SECURITY_ADMIN_PASSWORD`
+
+#### Подключение графаны к прометеусу
+Подключение к прометеусу идет из коробки.
+Нажмем на **Add data source**, в поле **Name** введем *Prometheus Server*, выберем **Type** *Prometheus*. В поле **URL** введем `http://prometheus:9090`. После чего нажмем кнопку **Save&Test**.
+
+#### Дашборы в графане
+У графаны есть громное колличество дашбордов, которые можно найти и скачать на [официальном сайте](https://grafana.com/grafana/dashboards).
+
+Найдем популярный дашборд для дата сорса прометеус и категории docker. Пример: Docker and system monitoring.
+
+Выберем найденный дашборд и нажмем на кнопку **Download JSON**. Скачаем данный JSON в директорию `monitoring/grafana/dashboards`. Переименуем его в DockerMonitoring.json
+
+Далее в веб-интерфейсе графаны наведем мышкой на знак "+" и выберем пункт **Import**. Нажмем на кнопку **Import JSON** и выберем наш скачанный json-файл дашборда. Далее выберем созданный нами ранее датасорс и нажмем на кнопку **Import**. После всех манипуляций на экране появится дашборд.
+
+
+### Мониторинг работы приложений
+Добавим в конфиг прометеуса информацию о сервисе post. После чего пересоберем образ прометеуса.
+
+Добавим в графане 3 дашборда:
+- DockerMonitoring
+- UI_Service_Monitoring
+- Business_Logic_Monitoring
+
+### Алертинг
+Для организации алертинга будем использовать дополнительный компонент для прометеуса *Alertmanager*
+
+Создадим директорию `monitoring/alertmanager` в которой создадим Dockerfile:
+
+```dockerfile
+FROM prom/alertmanager:v0.14.0
+ADD config.yml /etc/alertmanager/
+```
+
+Создадим в директории alertmanager файл config.yml в котором опишем конфигурацию aleermanager.
+
+В секции global определим параметр `slack_api_url` в котором определим url к апи слака выданого плагином Incoming Webhook.
+
+Соберем образ алертменеджера. Для удобства, можно добавить сборку и пуш в Makefile.
+
+Добавим в докер-композ файл наш новый сервис:
+
+```yaml
+  alertmanager:
+    image: ${USER_NAME}/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+    ports:
+      - 9093:9093
+    networks:
+      - prometheus
+```
+
+Не забудем так же открыть порт 9093 в GCP для доступа к веб-интерфейсу алертменеджера.
+
+Условия, при которых будет срабатывать алертинг, поместим в файл `monitoring/prometheus/alerts.yml`
+
+```yaml
+groups:
+  - name: alert.rules
+    rules:
+    - alert: InstanceDown
+      expr: up == 0
+      for: 1m
+      labels:
+        severity: page
+      annotations:
+        description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute'
+        summary: 'Instance {{ $labels.instance }} down'
+```
+
+Теперь обновим докер-файл прометеуса добавив в него копирование файла alerts
+
+```Dockerfile
+...
+ADD alerts.yml /etc/prometheus/
+```
+
+Так же в конфиг прометеуса добавим информацию о правилах и местонахождение алертменеджера:
+
+```yaml
+rule_files:
+  - "alerts.yml"
+
+alerting:
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets:
+      - "alertmanager:9093"
+```
+
+Теперь остается только пересобрать образ прометеуса и пересоздать инфраструктуру:
+
+```shell
+export USER_NAME=sjotus
+make prometheus-all
+cd docker
+docker-compose -f docker-compose-monitoring.yml down
+docker-compose -f docker-compose-monitoring.yml up -d
+```
+
+Проверим, что правило отображается в прометеусе на вкладке Alerts.
+
+Проверим работу алертинга остановив один из сервисов. В канал в слаке должно будет прийти уведомление.
+
+### Задания со *
+#### Добавление в Makefile сборки и пуша образов из данного ДЗ
+
+см. раздел Алертинг
+
+#### Сбор метрик прометеусом с докера
+В докере в экспериментальном режиме реализована отдача метрик в прометеус ([ссылка](https://docs.docker.com/config/thirdparty/prometheus/))
+
+Для начала необходимо включить метрики в докере.
+
+```shell
+docker-machine ssh
+sudo vim /etc/docker/daemon.json
+```
+
+В файле daemon.json (конфигурация только для тестирования. В Продакшене в GCP не стоит её использовать)
+
+```json
+{
+  "metrics-addr" : "0.0.0.0:9323",
+  "experimental" : true
+}
+```
+
+И перезапусим докер.
+
+```shell
+sudo systemctl restart docker.service
+```
+
+Не забудем в фаерволе GCP отрыть порт 9323.
+
+Далее в конфиге prometheus.yml добавим:
+
+```yaml
+...
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['<docker-host_ip>:9323']
+```
+
+Пересоберем прометеус и запустим инфраструктуру:
+
+```shell
+make prometheus
+cd docker && docker-compose -f docker-compose-monitoring.yml up -d
+```
+
+По сравнению с cAdvisor стандартные докеровские метрики скудны. Но они дают информацию о работе докер-энжина.
+
+Дашборд для метрик: `Docker_Engine_metrics.json`
+
+#### Сбор метрик с докера с использованием Telegraf
+
+Создадим в папке monitoring/exporters директорию telegraf. Создадим в ней конфигурационный файл для телеграфа telegraf.conf. В файле опишем конфигурацию импута (докер) и оутпута (прометеус).
+
+Там же создадим докерфайл для создания образа с телеграфом, где опишем добавление файла конфигурации внутрь контейнера.
+Не забудем поправить makefile, что бы можно было собирать и пушить наш образ.
+
+Теперь соберем наш образ.
+
+Далее добавим сервис телеграф в докер-композ файл.
+
+```yaml
+  telegraf:
+    image: ${USERNAME}/telegraf
+    networks:
+      - prometheus
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+```
+
+Так же, добавим сервис в конфиг прометеуса:
+
+```yaml
+  - job_name: 'telegraf'
+    static_configs:
+      - targets:
+        - 'telegraf:9273'
+```
+
+Пересоберем образ прометеуса и переподнимем нашу инфраструктуру.
+
+#### Реализовать другие алерты
+Реализуем алерт на 95 процентил времени ответа UI с расслыкой умедомления на email помимо слака.
+Для тестирования будем алертить в случае, если значение больше 0,1. 
+
+Добавим в файле alert.yml новый алертинг, после чего пересоберем образ с прометеусом.
+
+Для тестирования email-уведомлений будем использовать тестовый сервис [mailtrap](https://mailtrap.io/). После регистрации в сервисе, необходимо зайти в Inbox -> Demo inbox. Там будет доступна конфигурация почтового сервера (адрес, логин и пароль). Будем их использовать для конфигурации алертменеджера.
+
+Отредактируем конфиг алертменеджера (config.yml) добавив туда отправку на наш тестовый почтовый ящик.
+
+### Задания с **
+#### Автоматическое добавление датасорсов и дашбордов в графану
+
+Согласно [документации](https://grafana.com/docs/administration/provisioning/) в директории `/etc/grafana` необходимо создать диреторию `provisioning` а внутри каталоги datasources и dashboards для датасорсов и дашбордов соответсвенно. 
+
+Путь к директории можно изменить в конфигурационном файле. [Документация](https://grafana.com/docs/installation/configuration/#provisioning)
+
+Для начала опишем конфигурацию датасорсов и дашбордов в виде файлов. В диретории monitoring/grafana/ Создадим директорию provisioning, а внутри директории dashboards и datasources.
+
+Файл `dashboards.yml` и `datasources.yml` будут содержать нашу конфигурацию. Поместим их в соответствующие директории.
+
+Теперь создадим докер-файл для графаны, в котором опишем добавление созданной нами конфигурации.
+
+Не забудем добавить сборку и пуш графаны в makefile.
+
+#### Сбор метрик со stackdriver
+Stackdriver - это сервис по сбору метрик, логов и трейсов, а так же алертинг.
+
+Для сбора метрик и логов необходимо предварительно установить агентов. [quickstart](https://cloud.google.com/monitoring/quickstart-lamp)
+
+Установим агента мониторинга:
+
+```shell
+docker-mashine ssh docker-host
+curl -sSO https://dl.google.com/cloudagents/install-monitoring-agent.sh
+sudo bash install-monitoring-agent.sh
+```
+
+После этого в stackdriver будут приходить метрики. Их можно посмотреть на вкладке resources -> Metrics Explorer
+
+Базовые метрики по конкретному хосту можно увидеть зайдя в resources -> instances и выбрав конкретный инстанс.
+
+Можно организовать так же blackbox метрики. В стакдрайвер это называется Uptime Checks
+Необходимо зайти в панель мониторинга stackdriver и выбрать uptime checks -> uptime checks overwiev. В правом углу нажать на кнопку Add Uptime Check. Далее заполняем поля. Для проверки что чек работает, можно нажать на Test.
+
+
+Теперь, когда у нас есть метрики в стакдрайвере, мы можем их выгружать в прометеус.
+Будем использовать этот [экспортер](https://github.com/frodenas/stackdriver_exporter).
+
+Предварительно создадим сервисный аккаунт stckdriver и назначим ему роль monitoring Viewer.
+
+Сгенерируем ключ и сохраним его под именем gcp-stackdriver-docker-key.json на машину docker-host в предварительно созданный каталог `/var/gcp-cred/`
+
+Добавим конфигурацию стакдрайвер-экспортера в докер-композ файл:
+
+```yaml
+  stackdriver-exporter:
+    image: frodenas/stackdriver-exporter
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/var/gcp-cred/gcp-stackdriver-docker-key.json
+      - STACKDRIVER_EXPORTER_GOOGLE_PROJECT_ID=docker-248611
+      - STACKDRIVER_EXPORTER_MONITORING_METRICS_TYPE_PREFIXES=compute.googleapis.com/instance/cpu,compute.googleapis.com/instance/disk
+    ports:
+      - 9255:9255
+    networks:
+      - prometheus
+    volumes:
+      - /var/gcp-cred:/var/gcp-cred
+```
+
+В данной конфигурации он будет собирать все метрики о ЦПУ и Дисках со всех инстансов.
+
+Добавим экспортер в конфигурацию прометеуса:
+
+```yaml
+  - job_name: 'stackdriver'
+    static_configs:
+      - targets:
+        - 'stackdriver-exporter:9255'
+```
+
+Остается пересобрать образ прометеуса и задеплоить инфраструктуру
+
+### Задания с ***
+#### Реализовать схему проксирования между графаной и прометеусом через Trickster
+
+Trickster - это кэширующий прокси от компании Comcast. Он специально создан для проксирования запросов к прометеусу, для ускорения отрисовки дашбордов в графане. [Github](https://github.com/Comcast/trickster).
+
+В директории monitoring/trickster создадим конфигурационный файл сервиса trickster.conf. Там же создадим докер файл для сборки сервиса.
+
+Не забудем добавить в makefile сборку и пуш образа.
+
+Добавим сервис в докер-композ файл.
+
+```yaml
+  trickster:
+    image: ${USERNAME}/trickster
+    ports:
+      - 9089:9089
+    depends_on:
+      - prometheus
+    networks:
+      - prometheus
+```
+
+Изменим так же конфигурацию датасорсов в графане, на юрл трикстера
+
+
+----
 ## Homewokr 16 (monitoring-1)
 В данном домашнем задании было сделано:
 - Запуск prometheus в контейнере
