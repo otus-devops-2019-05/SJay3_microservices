@@ -120,6 +120,20 @@ docker-compose logs -f post
 
 Пересоздадим инфраструктуру и поднимем инфру для логирования.
 
+#### Использование фильтров в fluentd
+Для парсинга JSON в логе, определим фильтры в конфигурации fluentd. Файл `logging/fluentd/fluent.conf`
+
+```
+<filter service.post>
+  @type parser
+  format json
+  key_name log
+</filter>
+```
+
+Пересоберем образ и перезапустим сервис.
+
+
 ----
 ## Homework 17 (monitoring-2)
 В данном домашнем задании было сделано:
