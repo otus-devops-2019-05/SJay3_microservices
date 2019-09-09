@@ -11,6 +11,7 @@ SJay3 microservices repository
 - Elastic Stack
 - Структурированные логи
 - Неструктурированные логи
+- Разбор логов с помощью grok-шаблонов
 
 ### Подготовка окружения
 1. Скачаем новую версию приложения reddit и обновим его в папке /src ([ссылка](https://github.com/express42/reddit/tree/logging))
@@ -186,6 +187,11 @@ docker-compose logs -f post
   reserve_data true
 </filter>
 ```
+
+### Разбор логов с помощью grok-шаблонов
+Часть логов сервиса ui осталось неразобранной. Необходимо разобрать их через grok-шаблоны.
+
+
 
 ----
 ## Homework 17 (monitoring-2)
