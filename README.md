@@ -226,7 +226,64 @@ ZIPKIN_ENABLED=true
 
 Что бы зипкин получал трассировку, он должен быть в одной сети с микросервисами. Поэтому объявим сети нашего приложения в `docker-compose-logging.yml`, а так же добавим в эти сети zipkin.
 
-Пересоздадим нашу инфраструктуру. 
+Пересоздадим нашу инфраструктуру.
+
+#### Сломанное приложение
+Задание заключается в следующем:
+
+```
+С нашим приложением происходит что-то странное.
+Пользователи жалуются, что при нажатии на пост они вынуждены долго ждать, пока у них загрузится страница с постом. Жалоб на загрузку других страниц не поступало. Нужно выяснить, в чем проблема, используя Zipkin.
+```
+
+[сломанное приложение](https://github.com/Artemmkin/bugged-code).
+
+Для начала подготовим инфраструктуру. Что бы не ломать уже существующее приложение, скачаем сломанное в отдельную папку и соберем сервисы с тегом bug
+
+```shell
+git clone https://github.com/Artemmkin/bugged-code reddit_bug && rm -rf ./reddit_bug/.git
+```
+
+Отредактируем файлы docker_build.sh внутри каждого из микросервисов, добавив тег bug, после чего выполним скрипты, что бы собрались образы.
+
+```shell
+export USER_NAME=sjotus
+for i in ui post-py comment; do cd reddit_bug/$i; bash docker_build.sh; cd -; done
+
+```
+
+Т.к. в докерфайлах приложения не указаны переменные окружения, то укажем их в докер-композ файле.
+
+Для ui:
+
+```
+- POST_SERVICE_HOST=post
+- POST_SERVICE_PORT=5000
+- COMMENT_SERVICE_HOST=comment
+- COMMENT_SERVICE_PORT=9292
+```
+
+Для post:
+
+```
+- POST_DATABASE_HOST=post_db
+- POST_DATABASE=posts
+```
+
+Для comment:
+
+```
+- COMMENT_DATABASE_HOST=comment_db
+- COMMENT_DATABASE=comments
+```
+
+Далее отредактируем .env файл, проставив тег bug у приложений и запустим инфраструктуру:
+
+```shell
+docker-compose -f docker-compose.yml -f docker-compose-logging.yml up -d
+```
+
+
 
 ----
 ## Homework 17 (monitoring-2)
@@ -642,8 +699,7 @@ docker build -t $USER_NAME/prometheus .
 Скрипт для сборки всего из корня репозтория
 
 ```shell
-for i in ui post-py comment; do cd src/$i; bash
-docker_build.sh; cd -; done
+for i in ui post-py comment; do cd src/$i; bash docker_build.sh; cd -; done
 ```
 
 Теперь добавим в файл `docker/docker-compose.yml` информацию о сервисе с прометеусом.
