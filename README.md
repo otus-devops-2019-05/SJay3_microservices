@@ -5,6 +5,291 @@ SJay3 microservices repository
 
 [Докер-хаб](https://hub.docker.com/u/sjotus)
 
+## Homework 18 (logging-1)
+В данном домашнем задании было сделано:
+- Подготовка окружения
+- Elastic Stack
+- Структурированные логи
+- Неструктурированные логи
+- Разбор логов с помощью grok-шаблонов (*)
+- Распределенный трейсинг (*)
+
+### Подготовка окружения
+1. Скачаем новую версию приложения reddit и обновим его в папке /src ([ссылка](https://github.com/express42/reddit/tree/logging))
+2. Создадим новую машину через docker-machine:
+
+```shell
+export GOOGLE_PROJECT=docker-248611
+$ docker-machine create --driver google \
+    --google-machine-image https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1604-lts \
+    --google-machine-type n1-standard-1 \
+    --google-open-port 5601/tcp \
+    --google-open-port 9292/tcp \
+    --google-open-port 9411/tcp \
+    logging
+
+# configure local env
+$ eval $(docker-machine env logging)
+
+# узнаем IP адрес
+$ docker-machine ip logging
+```
+
+3. Соберем новые образы приложений. Можно сделать это через makefile:
+
+```shell
+export USER_NAME=sjotus
+make reddit-micro
+```
+
+### Elastic Stack
+
+Поднимим центральную систему логирования на эластике. Однако, вместо стандартного для ELK logstash будем использовать fluentd (т.е. реализуем EFK стек)
+
+Создадим отдельный докер-композ файл для системы логирования. Назовем файл `docker-compose-logging.yml`
+
+Не забудем открыть в GCP порты 24224 (tcp & udp), 9200 и 5601 для наших сервисов.
+
+Создадиим в репозитории директорию logging, где будем хранить все, что связано с логированием.
+
+#### Fluentd
+В диретории logging создадим папку fluentd, где создадим простой докер-файл для нашего образа fluentd.
+
+Cоздадим конфигурационный файл fluent.conf в диретории fluentd.
+
+Внесем так же информацию о сборке fluentd-образа в makefile и соберем образ:
+
+```shell
+make fluentd
+```
+
+#### elasticsearch
+
+При запуске эластика может возникнуть ошибка и контейнер с ним умрет:
+
+```
+max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]
+```
+
+Для исправления, необходимо поправить параметры ядра linux на хосте с докер-контейнерами:
+
+```shell
+docker-machine ssh logging
+sudo vim /etc/sysctl.conf
+```
+
+Необходимо добавить параметр:
+
+```
+vm.max_map_count = 262144
+```
+
+И применить параметры ядра:
+
+```shell
+sudo sysctl -p
+```
+
+### Структурированные логи
+#### Предварительная подготовка
+Поменяем в `.env` файле теги образов наших микромервисов:
+
+```
+UI_VERSION=logging
+POST_VERSION=logging
+COMMENT_VERSION=logging
+```
+
+Запустим наши приложения и подключимся к сервису post для просмотра логов:
+
+```shell
+cd docker
+docker-compose -f docker-compose.yml up -d
+docker-compose logs -f post
+```
+
+#### Отправка логов в Fluentd
+Для отправки логов в fluentd будем использовать докер-драйвер [fluentd](https://docs.docker.com/config/containers/logging/fluentd/). Добавим его в докер-композ файл.
+
+```yaml
+  post:
+    ...
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.post
+```
+
+Пересоздадим инфраструктуру и поднимем инфру для логирования.
+
+#### Использование фильтров в fluentd
+Для парсинга JSON в логе, определим фильтры в конфигурации fluentd. Файл `logging/fluentd/fluent.conf`
+
+```
+<filter service.post>
+  @type parser
+  format json
+  key_name log
+</filter>
+```
+
+Пересоберем образ и перезапустим сервис.
+
+### Неструктурированные логи
+Неструктурированные логи - это логи, формат которых не подстроен под систему централизованного логирования. Они не имеют четкой структуры
+
+#### Логирование UI сервиса
+Добавим драйвер fluentd к сервису UI по аналогии с сервисом post.
+
+Перезапустим сервис и посмотрим в kibana на неструктурированные логи.
+
+Для того, что бы распарсить такой лог, необходимо использовать регулярки. Добавми фильтр с регуляркой в fluent.conf
+
+```
+<filter service.ui>
+  @type parser
+  format /\[(?<time>[^\]]*)\]  (?<level>\S+) (?<user>\S+)[\W]*service=(?<service>\S+)[\W]*event=(?<event>\S+)[\W]*(?:path=(?<path>\S+)[\W]*)?request_id=(?<request_id>\S+)[\W]*(?:remote_addr=(?<remote_addr>\S+)[\W]*)?(?:method= (?<method>\S+)[\W]*)?(?:response_status=(?<response_status>\S+)[\W]*)?(?:message='(?<message>[^\']*)[\W]*)?/
+  key_name log
+</filter>
+```
+
+Пересоберем образ и перезапустим контейнер
+
+#### Использование grok-шаблонов
+Для того, что бы не писать регулярные выражения самому, можно использовать grok-шаблоны. По сути это именнованные шаблоны регулярных выражений.
+
+Заменим нашу регулярку на grok-шаблон:
+
+```
+<filter service.ui>
+  @type parser
+  key_name log
+  format grok
+  grok_pattern %{RUBY_LOGGER}
+</filter>
+```
+
+Это grok-шаблон, зашитый в плагин для fluentd. В развернутом виде он выглядит вот так:
+
+```
+%{RUBY_LOGGER} [(?<timestamp>(?>\d\d){1,2}-(?:0?[1-9]|1[0-2])-(?:(?:0[1-9])|(?:[12][0-9])|(?:3[01])|[1-9])[T ](?:2[0123]|[01]?[0-9]):?(?:[0-5][0-9])(?::?(?:(?:[0-5]?[0-9]|60)(?:[:.,][0-9]+)?))?(?:Z|[+-](?:2[0123]|[01]?[0-9])(?::?(?:[0-5][0-
+9])))?) #(?<pid>\b(?:[1-9][0-9]*)\b)\] *(?<loglevel>(?:DEBUG|FATAL|ERROR|WARN|INFO)) -- +(?<progname>.*?): (?<message>.*)
+```
+
+Для полноценного парсинва будем использовать несколько grok-шаблонов. Поэтому добавим еще секцию с фильтром в конфиг fluentd
+
+```
+<filter service.ui>
+  @type parser
+  format grok
+  grok_pattern service=%{WORD:service} \| event=%{WORD:event} \| request_id=%{GREEDYDATA:request_id} \| message='%{GREEDYDATA:message}'
+  key_name message
+  reserve_data true
+</filter>
+```
+
+### Разбор логов с помощью grok-шаблонов (*)
+Часть логов сервиса ui осталось неразобранной. Необходимо разобрать их через grok-шаблоны.
+
+Добавим новый фильтр после предыдущего:
+
+```
+<filter service.ui>
+  @type parser
+  format grok
+  grok_pattern service=%{WORD:service} \| event=%{WORD:event} \| path=%{URIPATH:path} \| request_id=%{GREEDYDATA:request_id} \| remote_addr=%{IPORHOST:remote_addr} \| method=%{GREEDYDATA:method} \| response_status=%{NUMBER:response_status}
+  key_name message
+  reserve_data false
+</filter>
+```
+
+### Распределенный трейсинг (*)
+Добавим в докер-композ файл для логирования сервис zipkin, который нужен для сбора информации о распределенном трейсинге
+
+```yaml
+services:
+  ...
+    zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
+```
+
+Не забудем отрыть порт в GCP
+
+Так же, для каждого сервиса добавим переменную `ZIPKIN_ENABLED`, а в `.env` файле укажем:
+
+```
+ZIPKIN_ENABLED=true
+```
+
+Что бы зипкин получал трассировку, он должен быть в одной сети с микросервисами. Поэтому объявим сети нашего приложения в `docker-compose-logging.yml`, а так же добавим в эти сети zipkin.
+
+Пересоздадим нашу инфраструктуру.
+
+#### Сломанное приложение
+Задание заключается в следующем:
+
+```
+С нашим приложением происходит что-то странное.
+Пользователи жалуются, что при нажатии на пост они вынуждены долго ждать, пока у них загрузится страница с постом. Жалоб на загрузку других страниц не поступало. Нужно выяснить, в чем проблема, используя Zipkin.
+```
+
+[сломанное приложение](https://github.com/Artemmkin/bugged-code).
+
+Для начала подготовим инфраструктуру. Что бы не ломать уже существующее приложение, скачаем сломанное в отдельную папку и соберем сервисы с тегом bug
+
+```shell
+git clone https://github.com/Artemmkin/bugged-code reddit_bug && rm -rf ./reddit_bug/.git
+```
+
+Отредактируем файлы docker_build.sh внутри каждого из микросервисов, добавив тег bug, после чего выполним скрипты, что бы собрались образы.
+
+```shell
+export USER_NAME=sjotus
+for i in ui post-py comment; do cd reddit_bug/$i; bash docker_build.sh; cd -; done
+
+```
+
+Т.к. в докерфайлах приложения не указаны переменные окружения, то укажем их в докер-композ файле.
+
+Для ui:
+
+```
+- POST_SERVICE_HOST=post
+- POST_SERVICE_PORT=5000
+- COMMENT_SERVICE_HOST=comment
+- COMMENT_SERVICE_PORT=9292
+```
+
+Для post:
+
+```
+- POST_DATABASE_HOST=post_db
+- POST_DATABASE=posts
+```
+
+Для comment:
+
+```
+- COMMENT_DATABASE_HOST=comment_db
+- COMMENT_DATABASE=comments
+```
+
+Далее отредактируем .env файл, проставив тег bug у приложений и запустим инфраструктуру:
+
+```shell
+docker-compose -f docker-compose.yml -f docker-compose-logging.yml up -d
+```
+
+Попытаемся загрузить страницу с постом и заметим, что она долго загружается. Переключимся в зипкин и посмотрим трейсы. Можем увидеть трейс, который выполнялся 3с. Если мы взгянем на него подробнее, то увидим, что основное время запроса занял поиск поста в БД, значит проблема в запросах к БД.
+
+Заглянем в исходный код сервиса post в файл `post_app.py` и найдем функцию отвечающую за поиск одного поста. Увидим, что в условии, если пост найден стоит задержка (`time.sleep(3)`).
+
+Закомментируем этот кусок кода, пересоберем приложение для проверки и увидим, что запросы теперь выполняются намного быстрее.
+
+----
 ## Homework 17 (monitoring-2)
 В данном домашнем задании было сделано:
 - Мониторинг докер-контейнеров
@@ -418,8 +703,7 @@ docker build -t $USER_NAME/prometheus .
 Скрипт для сборки всего из корня репозтория
 
 ```shell
-for i in ui post-py comment; do cd src/$i; bash
-docker_build.sh; cd -; done
+for i in ui post-py comment; do cd src/$i; bash docker_build.sh; cd -; done
 ```
 
 Теперь добавим в файл `docker/docker-compose.yml` информацию о сервисе с прометеусом.
