@@ -5,6 +5,11 @@ SJay3 microservices repository
 
 [Докер-хаб](https://hub.docker.com/u/sjotus)
 
+## Homework 19 (kubernetes-1)
+В данном домашнем задании было сделано:
+
+
+----
 ## Homework 18 (logging-1)
 В данном домашнем задании было сделано:
 - Подготовка окружения
