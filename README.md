@@ -7,7 +7,8 @@ SJay3 microservices repository
 
 ## Homework 19 (kubernetes-1)
 В данном домашнем задании было сделано:
-
+- Пройти The Hard Way
+- Описать установку компонентов kubernetes через плейбуки ansible (*)
 
 ----
 ## Homework 18 (logging-1)
