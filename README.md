@@ -10,6 +10,25 @@ SJay3 microservices repository
 - Пройти The Hard Way
 - Описать установку компонентов kubernetes через плейбуки ansible (*)
 
+### Пройти The Hard Way
+The Hard Way - это туториал по установке kubernetes, разработанный инженером Google Kelsey Hightower.
+Туториал представляет собой:
+- Пошаговое руководство по ручной установке основных компонентов kubrnetes кластера
+- Краткое описание необходимых действий и объектов.
+
+Но перед тем, как проходить "Сложный путь", подготовим наш репозиторий.
+
+В корне репозитория создадим папку kubernetes, внутри которой создадим папку reddit. Внутри создадим файлы для деплоймента наших микросервисов в кластер кубернетиса: commetn-deployment.yml, mongo-deployment.yml, post-deployment.yml и ui-deployment.yml
+
+#### The Hard Way. Начало
+Оригинальный [The Hard Way](https://github.com/kelseyhightower/kubernetes-the-hard-way).
+
+В оригинальном The Hard Way используется kubernetes версии 1.12 + изменились ограничения в GCP на количество IP адресов. Поэтому, будем проходить The Hard Way [адаптированный Отусом](https://github.com/express42/kubernetes-the-hard-way), который расчитан на версию 1.15.
+
+Создадим директорию `the_hard_way` внутри директории kubernetes. Туда мы будем складывать все файлы, созданные в ходе прохождения "Сложного пути".
+
+
+
 ----
 ## Homework 18 (logging-1)
 В данном домашнем задании было сделано:
