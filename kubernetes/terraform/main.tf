@@ -1,4 +1,4 @@
-### STAGE ###
+### KUBERNETES ###
 terraform {
   # версия terraform
   required_version = "~> 0.11.7"
@@ -14,23 +14,17 @@ provider "google" {
   region = "${var.region}"
 }
 
-module "kube-network" {
-  source = "modules/kube-network"
-  
+module "kubernetes" {
+  source = "modules/kubernetes"
+  # Common vars
+  public_key_path       = "${var.public_key_path}"
+  zone                  = "${var.zone}"
+
+  # Controller vars
+  controller_disk_image = "${var.disk_image}"
+  controller_count        = "${var.kube_controller_count}"
+
+  # worker vars
+  worker_disk_image = "${var.disk_image}"
+  worker_count    = "${var.kube_worker_count}"
 }
-
-module "kube-controller" {
-  source          = "modules/kube-controller"
-  public_key_path = "${var.public_key_path}"
-  zone            = "${var.zone}"
-  controller_disk_image  = "${var.disk_image}"
-  instance_count  = "${var.kube_controller_count}"
-}
-
-# module "db" {
-#   source          = "../modules/db"
-#   public_key_path = "${var.public_key_path}"
-#   zone            = "${var.zone}"
-#   db_disk_image   = "${var.db_disk_image}"
-# }
-

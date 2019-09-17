@@ -38,8 +38,8 @@ variable "kube_controller_count" {
   default     = "3"
 }
 
-variable "source_ranges" {
-  type        = "list"
-  description = "Source ranges for ssh firewall rule"
-  default     = ["0.0.0.0/0"]
+variable "kube_worker_count" {
+  type        = "string"
+  description = "Count instances"
+  default     = "1"
 }
