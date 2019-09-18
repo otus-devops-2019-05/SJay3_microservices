@@ -9,6 +9,11 @@ variable "zone" {
   description = "Zone"
 }
 
+variable "region" {
+  type = "string"
+  description = "region"
+}
+
 # Network vars
 variable "cidr_range" {
   type        = "string"

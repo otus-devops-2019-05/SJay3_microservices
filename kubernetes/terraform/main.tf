@@ -19,6 +19,7 @@ module "kubernetes" {
   # Common vars
   public_key_path       = "${var.public_key_path}"
   zone                  = "${var.zone}"
+  region = "${var.region}"
 
   # Controller vars
   controller_disk_image = "${var.disk_image}"

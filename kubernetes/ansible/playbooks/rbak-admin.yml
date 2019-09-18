@@ -1,0 +1,6 @@
+---
+# RBAC for Kubelet Authorization
+- name: Configure kubernetes controllers
+  hosts: controller
+  become: yes
+  tasks:
