@@ -1,0 +1,105 @@
+---
+# controller playbook
+- name: Configure kubernetes controllers
+  hosts: controller
+  become: yes
+  tasks:
+# KUBERNETES
+    - name: Create Additional Directories
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "/etc/kubernetes/config"
+        - "/var/lib/kubernetes"
+
+    - name: Install Kubernetes contorller binaries
+      get_url:
+        url: "{{ item }}"
+        mode: 'a+x'
+        dest: /usr/local/bin/
+      with_items:
+        - "https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kube-apiserver"
+        - "https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kube-controller-manager"
+        - "https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kube-scheduler"
+        - "https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kubectl"
+# Configure kube-apiserver
+    - name: Copy certificates and encryption config
+      copy:
+        src: "{{ item }}"
+        dest: /var/lib/kubernetes/
+      with_items:
+        - "../ssl/ca.pem"
+        - "../ssl/ca-key.pem"
+        - "../ssl/kubernetes-key.pem"
+        - "../ssl/kubernetes.pem"
+        - "../ssl/service-account-key.pem" 
+        - "../ssl/service-account.pem"
+        - "../files/encryption-config.yaml"
+
+    - name: Create kube-apiserver.service
+      template:
+        src: ../templates/kube-apiserver.service.j2
+        dest: /etc/systemd/system/kube-apiserver.service
+      notify:
+        - restart kube-apiserver
+
+# Configure kube controller manager
+    - name: Copy kube-controller-manager kubeconfig
+      copy:
+        src: "../kubeconfig/kube-controller-manager.kubeconfig"
+        dest: /var/lib/kubernetes/
+
+    - name: Create kube-controller-manager.service
+      template:
+        src: ../templates/kube-controller-manager.service.j2
+        dest: /etc/systemd/system/kube-controller-manager.service
+      notify:
+        - restart kube-controller-manager
+
+# Configure kube scheduler
+    - name: Copy kube-scheduler kubeconfig
+      copy:
+        src: "../kubeconfig/kube-scheduler.kubeconfig"
+        dest: /var/lib/kubernetes/
+
+    - name: Copy kube-scheduler.yaml config file
+      copy:
+        src: "../files/kube-scheduler.yaml"
+        dest: /etc/kubernetes/config/kube-scheduler.yaml
+
+    - name: Create kube-scheduler.service
+      template:
+        src: ../templates/kube-scheduler.service.j2
+        dest: /etc/systemd/system/kube-scheduler.service
+      notify:
+        - restart kube-scheduler
+
+# Start and enable services
+    - name: Start and Enable all services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      with_items:
+        - "kube-apiserver.service"
+        - "kube-controller-manager.service"
+        - "kube-scheduler.service"
+
+  handlers:
+    - name: restart kube-apiserver
+      systemd:
+        name: kube-apiserver.service
+        daemon_reload: yes
+        state: restarted
+    - name: restart kube-controller-manager
+      systemd:
+        name: kube-controller-manager.service
+        daemon_reload: yes
+        state: restarted
+    - name: restart kube-scheduler
+      systemd:
+        name: kube-scheduler.service
+        daemon_reload: yes
+        state: restarted

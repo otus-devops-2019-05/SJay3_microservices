@@ -1,0 +1,5 @@
+---
+# main playbook
+- import_playbook: etcd.yml
+- import_playbook: kube-controller.yml
+- import_playbook: nginx-proxy.yml
