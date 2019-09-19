@@ -1,6 +1,6 @@
 ---
 # For GCP HealthChecks
-- name: Configure kubernetes controllers
+- name: Configure nginx-proxy
   hosts: controller
   become: yes
   tasks:

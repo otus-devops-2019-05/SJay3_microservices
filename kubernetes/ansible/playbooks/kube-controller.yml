@@ -29,12 +29,12 @@
         src: "{{ item }}"
         dest: /var/lib/kubernetes/
       with_items:
-        - "../ssl/ca.pem"
-        - "../ssl/ca-key.pem"
-        - "../ssl/kubernetes-key.pem"
-        - "../ssl/kubernetes.pem"
-        - "../ssl/service-account-key.pem" 
-        - "../ssl/service-account.pem"
+        - "../kube-files/ca.pem"
+        - "../kube-files/ca-key.pem"
+        - "../kube-files/kubernetes-key.pem"
+        - "../kube-files/kubernetes.pem"
+        - "../kube-files/service-account-key.pem"
+        - "../kube-files/service-account.pem"
         - "../files/encryption-config.yaml"
 
     - name: Create kube-apiserver.service
@@ -47,7 +47,7 @@
 # Configure kube controller manager
     - name: Copy kube-controller-manager kubeconfig
       copy:
-        src: "../kubeconfig/kube-controller-manager.kubeconfig"
+        src: "../kube-files/kube-controller-manager.kubeconfig"
         dest: /var/lib/kubernetes/
 
     - name: Create kube-controller-manager.service
@@ -60,7 +60,7 @@
 # Configure kube scheduler
     - name: Copy kube-scheduler kubeconfig
       copy:
-        src: "../kubeconfig/kube-scheduler.kubeconfig"
+        src: "../kube-files/kube-scheduler.kubeconfig"
         dest: /var/lib/kubernetes/
 
     - name: Copy kube-scheduler.yaml config file

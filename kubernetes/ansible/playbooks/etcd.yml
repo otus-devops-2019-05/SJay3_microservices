@@ -25,9 +25,9 @@
         src: "{{ item }}"
         dest: /etc/etcd/
       with_items:
-        - "../ssl/ca.pem"
-        - "../ssl/kubernetes-key.pem"
-        - "../ssl/kubernetes.pem"
+        - "../kube-files/ca.pem"
+        - "../kube-files/kubernetes-key.pem"
+        - "../kube-files/kubernetes.pem"
 
     - name: Create etcd.service
       template:
