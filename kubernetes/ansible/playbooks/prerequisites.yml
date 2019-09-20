@@ -7,17 +7,10 @@
 - name: Prerequisites
   hosts: 127.0.0.1
   connection: local
-  become: yes
+  #become: yes
   gather_facts: no
   tasks:
-    - name: "Get hosts"
-      debug:
-        msg: |
-          {% for host in groups['controller'] %}
-            "{{ hostvars[host]['ansible_facts']['hostname'] }}"
-          {% endfor %}
-
-    # - name: hostname
-    #   debug:
-    #     msg: "{{ hostname }}"
- #     delegate_to: localhost
+    - name: Generate certs and configs
+      script: ../scripts/generate.sh
+      args:
+        chdir: "{{ playbook_dir | regex_replace('playbooks', 'kube-files') }}"

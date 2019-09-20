@@ -1,0 +1,24 @@
+---
+# Configure local kubectl
+- name: Configure local kubectl
+  hosts: 127.0.0.1
+  connection: local
+  gather_facts: no
+  # vars:
+  #   kube_ip:
+  #     KUBERNETES_PUBLIC_ADDRESS: |
+  #       $(gcloud compute addresses describe kubernetes-the-hard-way \
+  #         --region $(gcloud config get-value compute/region) \
+  #         --format 'value(address)')
+  tasks:
+    - name: Get kube external ip
+      shell: |
+        export KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+          --region $(gcloud config get-value compute/region) \
+          --format 'value(address)') \
+          && echo $KUBERNETES_PUBLIC_ADDRESS
+      register: kube_ip
+
+    - name: Show env
+      debug:
+        msg: "{{ kube_ip.stdout }}"
