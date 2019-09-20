@@ -22,3 +22,25 @@
     - name: Show env
       debug:
         msg: "{{ kube_ip.stdout }}"
+
+    - name: kubectl set-config
+      shell: |
+        kubectl config set-cluster kubernetes-the-hard-way \
+        --certificate-authority=../kube-files/ca.pem \
+        --embed-certs=true \
+        --server=https://{{ kube_ip.stdout }}:6443
+
+    - name: kubectl set-credential
+      shell: |
+        kubectl config set-credentials admin \
+        --client-certificate=../kube-files/admin.pem \
+        --client-key=../kube-files/admin-key.pem
+
+    - name: kubectl set-context
+      shell: |
+        kubectl config set-context kubernetes-the-hard-way \
+        --cluster=kubernetes-the-hard-way \
+        --user=admin
+
+    - name: kubectl use-context
+      shell: kubectl config use-context kubernetes-the-hard-way
