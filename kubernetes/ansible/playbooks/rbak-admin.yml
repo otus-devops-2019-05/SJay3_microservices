@@ -19,3 +19,4 @@
         kubectl apply \
         --kubeconfig ~/admin.kubeconfig \
         -f ~/rbak-admin.yaml
+      ignore_errors: yes
