@@ -44,6 +44,12 @@ minikube start --vm-driver=hyperv
 
 Для выбора версии kubernetes можно использовать флаг `--kubernetes-version <version>`
 
+Запустим кластер следующей командой:
+
+```shell
+minikube start --vm-driver=hyperv --kubernetes-version v1.15.0
+```
+
 #### Конфигурация kubectl
 
 Конфигурация kubectl - это контекст.
@@ -97,6 +103,53 @@ kubectl config get-contexts
 ```
 
 ### Запуск приложения в локальном кластере
+
+Запустим 3 реплики сервиса ui (предварительно отредактировав файл ui-deployment.yml)
+
+```shell
+kubectl apply -f ui-deployment.yml
+```
+
+Проверим, что наш деплоймент запустился и существует 3 реплики сервиса ui:
+
+```shell
+kubectl get deployment
+```
+
+kubectl умеет пробрасывать порты на локальную машину
+
+```shell
+# найдем под используя селектор
+kubectl get pods --selector component=ui
+# Пробросим порт пода 9292 на локальный 8080
+kubectl port-forward <podname> 8080:9292
+```
+
+Проброс порта работает только пока активна команда.
+
+Опишем так же компоненты comment и post аналогичным образом, что и ui.
+
+Сделаем описание деплоймента для монги. Но реплик у монги будет всего 1. Так же, примонтируем стандартный вольюм для хранения данных вне контейнера.
+
+```yaml
+    spec:
+      containers:
+      - image: mongo:3.2
+        name: mongo
+        volumeMounts:
+        - name: mongo-persistent-storage
+          mountPath: /data/db
+      volumes:
+      - name: mongo-persistent-storage
+        emptyDir: {}
+```
+
+#### Использование сервисов
+Для связи компонентов между собой и с внешним миром используется объект Service. Он определяет набор подов и способ доступа к ним.
+
+Для того, что бы сервис ui мог связываться с post и comment, необходимо последним создать по объекту Service.
+
+Создадим файлы comment-service.yml и post-service.yml.
 
 ----
 ## Homework 19 (kubernetes-1)
