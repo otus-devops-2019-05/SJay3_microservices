@@ -7,8 +7,96 @@ SJay3 microservices repository
 
 ## Homework 20 (kubernetes-2)
 В данном домашнем задании было сделано:
+- Развернуть kubernetes в локальном окружении
+- Запуск приложения в локальном кластере
+
+### Развернуть kubernetes в локальном окружении
+#### Установка kubeclt
+[Инструкция по установке](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+
+Для установки на windows, необходимо скачать бинарник по [ссылке](https://storage.googleapis.com/kubernetes-release/release/v1.16.0/bin/windows/amd64/kubectl.exe), после чего прописать путь к бинарнику в PATH. Для этого отрыть свойсва компьютера -> Дополнительные параметры системы -> Переменные среды.
+В секции "Системные переменные" найти Path и нажать изменить.
+
+В случае, если был установлен Docker for Windows, то необходимо что бы путь к kubectl был указан раньше, чем путь к докеру, т.к. у докера есть свой kubectl.
+
+#### Установка minikube
+Для работы minikube нам понадобится установленный гипервизор. Для windows это может быть VirtualBox или Hyper-V.
+
+[Инструкция по установке minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
+
+Для установки на Windows, необходимо скачать инсталлер и установить миникуб.
+
+#### Запуск minikube
+
+Миникуб запускается командой:
+
+```shell
+minikube start
+```
+
+!! В Windows, консоль должна быть запущена от администратора. Так же, команды необходимо выполнять из корня диска C
+
+По-умолчанию используется virtualbox, поэтому для запуска в hyper-v, необходимо запускать со специальным флагом:
+
+```shell
+minikube start --vm-driver=hyperv
+```
+
+Для выбора версии kubernetes можно использовать флаг `--kubernetes-version <version>`
+
+#### Конфигурация kubectl
+
+Конфигурация kubectl - это контекст.
+
+Контекст состоит из:
+- cluster - API сервера
+- user - Пользователь для подключения к кластеру
+- namespace - Область видимости (не обязательный параметр. По-умолчанию default)
+
+Информация о контекстах сохраняется в файле `~/.kube/config` (В Windows: `<Домашняя папка пользователя>\.kube\config`)
+
+Порядок конфигурирования kubectl:
+
+1. Создать кластер:
+
+```shell
+kubectl config set-cluster ... cluster_name
+```
+
+2. Создать данные пользователя (credentials):
+
+```shell
+kubectl config set-credentials ... user_name
+```
+
+3. Создать контекст:
+
+```shell
+kubectl config set-context context_name \
+--cluster=cluster_name \
+--user=user_name
+```
+
+4. Использовать контекст:
+
+```shell
+kubectl config use-context context_name
+```
 
 
+Посмотреть текущий контекст:
+
+```shell
+kuectl config current-context
+```
+
+Список всех контекстов:
+
+```shell
+kubectl config get-contexts
+```
+
+### Запуск приложения в локальном кластере
 
 ----
 ## Homework 19 (kubernetes-1)
