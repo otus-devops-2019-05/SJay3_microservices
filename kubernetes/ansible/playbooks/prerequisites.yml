@@ -1,0 +1,16 @@
+---
+- name: Gather Facts
+  hosts: all
+  gather_facts: yes
+  tasks: []
+
+- name: Prerequisites
+  hosts: 127.0.0.1
+  connection: local
+  #become: yes
+  gather_facts: no
+  tasks:
+    - name: Generate certs and configs
+      script: ../scripts/generate.sh
+      args:
+        chdir: "{{ playbook_dir | regex_replace('playbooks', 'kube-files') }}"

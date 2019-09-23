@@ -1,0 +1,22 @@
+---
+# RBAC for Kubelet Authorization
+- name: Configure kubernetes controllers
+  hosts: controller
+  become: yes
+  tasks:
+    - name: Copy admin.kubeconfig
+      copy:
+        src: "../kube-files/admin.kubeconfig"
+        dest: ~/
+
+    - name: Copy ClusterRole and ClusterRoleBinding
+      copy:
+        src: "../files/rbak-admin.yaml"
+        dest: ~/
+
+    - name: Apply ClusterRole and ClusterRoleBinding
+      shell: |
+        kubectl apply \
+        --kubeconfig ~/admin.kubeconfig \
+        -f ~/rbak-admin.yaml
+      ignore_errors: yes

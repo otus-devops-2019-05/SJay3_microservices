@@ -1,0 +1,11 @@
+plugin: gcp_compute
+projects:
+  - docker-248611
+regions:
+  - us-west1
+groups:
+  controller: "'controller' in name"
+  worker: "'worker' in name"
+filters: []
+auth_kind: serviceaccount
+service_account_file: ~/ansible_gcp-docker_key.json

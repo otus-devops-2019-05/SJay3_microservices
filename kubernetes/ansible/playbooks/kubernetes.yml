@@ -1,0 +1,9 @@
+---
+# main playbook
+- import_playbook: prerequisites.yml
+- import_playbook: etcd.yml
+- import_playbook: kube-controller.yml
+- import_playbook: nginx-proxy.yml
+- import_playbook: rbak-admin.yml
+- import_playbook: kube-worker.yml
+- import_playbook: kubectl-local.yml

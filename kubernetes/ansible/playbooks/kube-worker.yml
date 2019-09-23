@@ -1,0 +1,174 @@
+---
+# worker playbook
+- name: Configure kubernetes controllers
+  hosts: worker
+  become: yes
+  vars:
+    pod_cidr: 10.200.0.0/24
+  tasks:
+    - name: Install Dependencies
+      apt:
+        name: "{{ item }}"
+        update_cache: yes
+        state: present
+      with_items:
+        - socat
+        - conntrack
+        - ipset
+
+    - name: Create additional directories
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "/etc/cni/net.d"
+        - "/opt/cni/bin"
+        - "/var/lib/kubelet"
+        - "/var/lib/kube-proxy"
+        - "/var/lib/kubernetes"
+        - "/var/run/kubernetes"
+        - "/etc/containerd"
+
+# Install runsc and runc
+    - name: Install RunsC
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-the-hard-way/runsc-50c283b9f56bb7200938d9e207355f05f79f0d17
+        mode: 'a+x'
+        dest: /usr/local/bin/runsc
+    - name: Install RunC
+      get_url: 
+        url: https://github.com/opencontainers/runc/releases/download/v1.0.0-rc8/runc.amd64
+        mode: 'a+x'
+        dest: /usr/local/bin/runc
+
+# Install cni and crictl
+    - name: Install crictl
+      unarchive:
+        src: https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.15.0/crictl-v1.15.0-linux-amd64.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+    - name: Install cni
+      unarchive:
+        src: https://github.com/containernetworking/plugins/releases/download/v0.8.1/cni-plugins-linux-amd64-v0.8.1.tgz
+        dest: /opt/cni/bin/
+        remote_src: yes
+
+# install containerd
+    - name: Install containerd
+      unarchive:
+        src: https://github.com/containerd/containerd/releases/download/v1.2.7/containerd-1.2.7.linux-amd64.tar.gz
+        dest: /
+        remote_src: yes
+
+# Install kubectl, kube-proxy and kubelet
+    - name: Install kubectl, kube-proxy and kubelet
+      get_url:
+        url: "{{ item }}"
+        mode: 'a+x'
+        dest: /usr/local/bin/
+      with_items:
+        - "https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kubectl"
+        - "https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kube-proxy"
+        - "https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kubelet"
+
+# Configure CNI
+    - name: Create the bridge
+      template:
+        src: ../templates/10-bridge.conf.j2
+        dest: /etc/cni/net.d/10-bridge.conf
+    - name: Create the loopback
+      template:
+        src: ../templates/99-loopback.conf.j2
+        dest: /etc/cni/net.d/99-loopback.conf
+
+# Configure containerd
+    - name: Configure containerd
+      copy:
+        src: ../files/config.toml
+        dest: /etc/containerd/config.toml
+
+    - name: Create containerd.service
+      template:
+        src: ../templates/containerd.service.j2
+        dest: /etc/systemd/system/containerd.service
+      notify:
+        - restart containerd
+
+# Configure kubelet
+    - name: Copy kubelet certs
+      copy:
+        src: "{{ item }}"
+        dest: /var/lib/kubelet/
+      with_items:
+        - "../kube-files/{{ ansible_facts['hostname'] }}-key.pem"
+        - "../kube-files/{{ ansible_facts['hostname'] }}.pem"
+
+    - name: Copy ca certs
+      copy: 
+        src: ../kube-files/ca.pem
+        dest: /var/lib/kubernetes/
+
+    - name: Copy kubeconfig
+      copy:
+        src: "../kube-files/{{ ansible_facts['hostname'] }}.kubeconfig"
+        dest: /var/lib/kubelet/kubconfig
+    
+    - name: Copy kubelet config yaml
+      template:
+        src: ../templates/kubelet-config.yaml.j2
+        dest: /var/lib/kubelet/kubelet-config.yaml
+
+    - name: Create kubelet.service
+      template:
+        src: ../templates/kubelet.service.j2
+        dest: /etc/systemd/system/kubelet.service
+      notify:
+        - restart kubelet
+
+# Configure kube-proxy
+    - name: Copy kube-proxy kubeconfig
+      copy:
+        src: ../kube-files/kube-proxy.kubeconfig
+        dest: /var/lib/kube-proxy/kubeconfig
+
+    - name: Copy kube-proxy config yaml
+      copy:
+        src: ../files/kube-proxy-config.yaml
+        dest: /var/lib/kube-proxy/kube-proxy-config.yaml
+
+    - name: Create kube-proxy.service
+      template:
+        src: ../templates/kube-proxy.service.j2
+        dest: /etc/systemd/system/kube-proxy.service
+      notify:
+        - restart kube-proxy
+
+# Start and enable services
+    - name: Start and Enable all services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      with_items:
+        - "containerd.service"
+        - "kubelet.service"
+        - "kube-proxy.service"
+
+  handlers:
+    - name: restart containerd
+      systemd:
+        name: containerd.service
+        daemon_reload: yes
+        state: restarted
+    - name: restart kubelet
+      systemd:
+        name: kubelet.service
+        daemon_reload: yes
+        state: restarted
+    - name: restart kube-proxy
+      systemd:
+        name: kube-proxy.service
+        daemon_reload: yes
+        state: restarted
+

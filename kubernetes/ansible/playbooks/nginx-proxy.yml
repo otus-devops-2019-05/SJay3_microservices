@@ -1,0 +1,38 @@
+---
+# For GCP HealthChecks
+- name: Configure nginx-proxy
+  hosts: controller
+  become: yes
+  tasks:
+    - name: Install nginx
+      apt:
+        name: nginx
+        update_cache: yes
+        state: present
+
+    - name: Copy proxy config
+      copy:
+        src: "../files/kubernetes.default.svc.cluster.local"
+        dest: /etc/nginx/sites-available/kubernetes.default.svc.cluster.local
+      notify:
+        - restart nginx
+
+    - name: Enable proxy config
+      file:
+        path: /etc/nginx/sites-enabled/kubernetes.default.svc.cluster.local
+        src: /etc/nginx/sites-available/kubernetes.default.svc.cluster.local
+        state: link
+      notify:
+        - restart nginx
+
+    - name: enable nginx.service
+      systemd:
+        name: nginx.service
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: restart nginx
+      systemd:
+        name: nginx.service
+        state: restarted
