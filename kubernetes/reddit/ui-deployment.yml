@@ -22,3 +22,8 @@ spec:
       containers:
       - image: sjotus/ui
         name: ui
+        env:
+        - name: env
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
