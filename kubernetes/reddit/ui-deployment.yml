@@ -23,7 +23,7 @@ spec:
       - image: sjotus/ui
         name: ui
         env:
-        - name: env
+        - name: ENV
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
