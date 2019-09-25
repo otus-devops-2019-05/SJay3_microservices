@@ -6,7 +6,7 @@ terraform {
 
 provider "google" {
   # Версия провайдера
-  version = "2.0.0"
+  version = "2.16.0"
 
   # id проекта
   project = "${var.project}"
@@ -16,13 +16,20 @@ provider "google" {
 
 resource "google_container_cluster" "cluster" {
   name     = "cluster"
-  location = "${var.zone}"
+  location = "${var.region}"
 
   # We can't create a cluster with no node pool defined, but we want to only use
   # separately managed node pools. So we create the smallest possible default
   # node pool and immediately delete it.
   remove_default_node_pool = true
   initial_node_count = 1
+
+  # temporary nodes
+  node_config {
+    machine_type = "g1-small"
+    disk_size_gb = "10"
+    preemptible = "true"
+  }
 
   master_auth {
     username = ""
@@ -42,7 +49,7 @@ resource "google_container_cluster" "cluster" {
 
 resource "google_container_node_pool" "reddit-pool" {
   name = "reddit-pool"
-  location = "${var.zone}"
+  location = "${var.region}"
   cluster = "${google_container_cluster.cluster.name}"
   node_count = "${var.node_count}"
 
