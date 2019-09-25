@@ -11,6 +11,7 @@ SJay3 microservices repository
 - Запуск приложения в локальном кластере
 - Использование неймспейсов в kubernetes
 - Развернуть кубернетес в Google Cloud
+- Развернуть GCE через terraform (*)
 
 ### Развернуть kubernetes в локальном окружении
 #### Установка kubeclt
@@ -260,7 +261,69 @@ minikube service ui -n dev
 Добавим информациюю об окружении в контейнер, определим переменную окружения ENV.
 
 ### Развернуть кубернетес в Google Cloud
+В GCP идем в Kubernetes Engin и нажимаем Create Cluster
 
+После запуска кластера, нажмем на кнопку Connect и скопируем команду, для подключения к кластеру. В результате команды, у нас должен настроиться kubectl на доступ к нашему кластеру. Проверим:
+
+```shell
+kubectl config current-context
+```
+
+Запустим наше приложение в кубернетес-кластере GCP:
+
+```shell
+# Создадим dev namespace
+kubectl apply -f reddit/dev-namespace.yml
+
+# Развернем наше приложение
+kubectl apply -f reddit -n dev
+```
+
+Создадим правило фаервола в GCP, с диапазоном портов 30000-32767.
+
+Далее найдем внешний адрес любой из нод и порт публикации ui сервиса, после чего, откроем адрсе в браузере для проверки работоспособности приложения:
+
+```shell
+# node ip
+kubectl get nodes -o wide
+
+# ui port
+kubectl describe service ui -n dev | grep NodePort
+```
+
+Зайдем в GCP и включим дашборд в кубернетесе. После загрузки кластера, выполним в консоли команду:
+
+```shell
+kubectl proxy
+```
+
+И в браузере введем:
+`http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/#!/login` для доступа к дашборду.
+
+Для входа в дашборд понадобится токен в новых версиях кубернетиса. Что бы можно было пропустить шаг со вставкой токена и загрузить дашборд выполним:
+
+```shell
+kubectl edit deployment/kubernetes-dashboard --namespace=kube-system
+```
+
+Откроется редактор. Найдем секцию containers и добавим в args аргумент `--enable-skip-login`
+
+```yaml
+    containers:
+      - args:
+        - --auto-generate-certificates
+        - --enable-skip-login  
+```
+
+Для того, что бы дашборд не застрял на авторизации, необходимо сервис-аккаунту дашборда назначить роль cluster-admin:
+
+```shell
+kubectl create clusterrolebinding kubernetes-dashboard  --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard
+```
+
+P.S. У меня так и не заработал дашборд. При изменении деплоймента и добавлении `--enable-skip-login` сначала все вроде применяется, но после того, как в браузере открываешь страницу, все равно запрашивается аутентификация. А исправленное значение в деплойменте бесследно исчезает...как будто его там и не было.
+
+### Развернуть GCE через terraform (*)
 
 ----
 ## Homework 19 (kubernetes-1)
