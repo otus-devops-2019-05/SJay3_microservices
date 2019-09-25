@@ -247,6 +247,7 @@ metadata:
 Запутим наше приложение в dev namespace
 
 ```shell
+kubectl apply -f kubernetes/reddit/dev-namespace.yml
 kubectl apply -n dev -f kubernetes/reddit/
 ```
 

@@ -27,8 +27,8 @@ spec:
       - image: mongo:3.2
         name: mongo
         volumeMounts:
-        - name: mongo-persistant-storage
+        - name: mongo-persistent-storage
           mountPath: /data/db
       volumes:
-      - name: mongo-persistant-storage
+      - name: mongo-persistent-storage
         emptyDir: {}
