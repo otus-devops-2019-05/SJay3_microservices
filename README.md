@@ -5,6 +5,12 @@ SJay3 microservices repository
 
 [Докер-хаб](https://hub.docker.com/u/sjotus)
 
+
+## Homework 21 (kubernetes-3)
+В данном домашнем задании было сделано:
+
+
+----
 ## Homework 20 (kubernetes-2)
 В данном домашнем задании было сделано:
 - Развернуть kubernetes в локальном окружении
