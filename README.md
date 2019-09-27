@@ -137,6 +137,29 @@ kubectl apply -f reddit/ui-ingress.yml -n dev
 ### Описать объект secret в виде кубернетес-манифеста (*)
 В предыдущей главе мы создали объект типа Secret через kubectl. Опишем его в виде манифеста кубернетес. Файл назовем ui-secret-ingress.yml.
 
+Структура файла должна быть следующей:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ui-ingress
+type: kubernetes.io/tls
+data:
+  tls.crt: <base64_cert>
+  tls.key: <base64_key>
+
+```
+
+Сертификат и ключ должны быть в base64:
+
+```shell
+cat tls.key | base64
+cat tls.crt | base64
+```
+
+
 ----
 ## Homework 20 (kubernetes-2)
 В данном домашнем задании было сделано:
