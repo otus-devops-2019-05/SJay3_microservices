@@ -16,7 +16,7 @@ provider "google" {
 
 resource "google_container_cluster" "cluster" {
   name     = "cluster"
-  location = "${var.region}"
+  location = "${var.zone}"
 
   # We can't create a cluster with no node pool defined, but we want to only use
   # separately managed node pools. So we create the smallest possible default
@@ -49,7 +49,7 @@ resource "google_container_cluster" "cluster" {
 
 resource "google_container_node_pool" "reddit-pool" {
   name = "reddit-pool"
-  location = "${var.region}"
+  location = "${var.zone}"
   cluster = "${google_container_cluster.cluster.name}"
   node_count = "${var.node_count}"
 

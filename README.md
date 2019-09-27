@@ -215,6 +215,23 @@ policyTypes:
 
 ### Хранилище для базы
 
+Сейчас для монги используется тип Volume emptyDir. При создании пода с таким типом, создается пустой докер вольюм, а при остановке пода - вольюм удалится навсегда. Вместо него, будем использовать gcePersistentDisk.
+
+Создадим диск на Google Cloud:
+
+```shell
+gcloud compute disks create --size=25GB --zone=us-west1-c reddit-mongo-disk
+```
+
+Изменим mongo-deployment.yml удалив emptyDir и добавив gcePersistantDisk
+
+```yaml
+  volumes:
+      - name: mongo-gce-pd-storage
+        gcePersistentDisk:
+          pdName: reddit-mongo-disk
+          fsType: ext4
+```
 
 ----
 ## Homework 20 (kubernetes-2)
