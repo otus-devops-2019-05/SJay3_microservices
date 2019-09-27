@@ -233,6 +233,30 @@ gcloud compute disks create --size=25GB --zone=us-west1-c reddit-mongo-disk
           fsType: ext4
 ```
 
+Для более удобного управления вольюмами мы можем использовать не отдельный диск для каждого пода, а отдельный ресурс хранилища, общий для всего кластера - PersistentVolume.
+
+Создадим файл mongo-volume.yml с описанием PersistentVolume.
+
+Так же создадим запрос на выдачу созданного нами ресурса - PersistentVolumeClaim (PVC). Файл mongo-claim.yml.
+
+Подключим PVC к поду с монгой
+
+```yaml
+...
+volumes:
+      - name: mongo-gce-pd-storage
+        persistentVolumeClaim:
+          claimName: mongo-pvc
+```
+
+Для того, что бы создавать хранилища в автоматическом режиме и динамически выделять вольюмы, необходимо использовать StorageClass. Они описывают где и какие хранилища создаются.
+
+Опишем StorageClass Fast что бы монтировались SSD диски для работы нашего хранилища. Файл storage-fast.yml.
+
+Создадим новый клайм на запрос быстрых дисков - mongo-claim-dynamyc.yml.
+
+Так же изменим в в деплойменте монги запрос с обычных дисков на ссд.
+
 ----
 ## Homework 20 (kubernetes-2)
 В данном домашнем задании было сделано:
