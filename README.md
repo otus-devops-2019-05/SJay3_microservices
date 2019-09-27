@@ -8,7 +8,33 @@ SJay3 microservices repository
 
 ## Homework 21 (kubernetes-3)
 В данном домашнем задании было сделано:
+- Настройка сервиса типа LoadBalancer
 
+### Настройка сервиса типа LoadBalancer
+В прошлой дз мы установили у ui сервиса тип NodePort, который позволил нам по ip-адресу ноды и порту указанному в NodePort подключаться из вне к нашему сервису ui. Это не очень удобно. Поэтому с помощью типа сервиса LoadBalancer (этот тип доступен только в облачных провайдерах) мы настроим облачных балансировщик как единую точку входа для нашего сервиса ui.
+
+Для этого в ui-service.yml изменим тип с NodePort на LoadBalancer + внесем еще несколько правок.
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+  labels:
+    app: reddit
+    component: ui
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    nodePort: 32092
+    protocol: TCP
+    targetPort: 9292
+  selector:
+    app: reddit
+    component: ui
+```
 
 ----
 ## Homework 20 (kubernetes-2)
@@ -990,7 +1016,7 @@ Trickster - это кэширующий прокси от компании Comca
 
 
 ----
-## Homewokr 16 (monitoring-1)
+## Homework 16 (monitoring-1)
 В данном домашнем задании было сделано:
 - Запуск prometheus в контейнере
 - Упорядочивание репозитория
