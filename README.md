@@ -10,6 +10,8 @@ SJay3 microservices repository
 В данном домашнем задании было сделано:
 - Настройка сервиса типа LoadBalancer
 - Использование объекта Ingress
+- TLC Termination
+- Описать объект secret в виде кубернетес-манифеста (*)
 
 ### Настройка сервиса типа LoadBalancer
 В прошлой дз мы установили у ui сервиса тип NodePort, который позволил нам по ip-адресу ноды и порту указанному в NodePort подключаться из вне к нашему сервису ui. Это не очень удобно. Поэтому с помощью типа сервиса LoadBalancer (этот тип доступен только в облачных провайдерах) мы настроим облачных балансировщик как единую точку входа для нашего сервиса ui.
@@ -75,6 +77,65 @@ Ingress Controller - это под, который состоит из 2-х фу
 ```shell
 kubectl get ingress -n dev
 ```
+
+Вернем обратно сервису ui тип NodePort, а в ингрессе пропишем правила балансировки:
+
+```yaml
+...
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: ui
+          servicePort: 9292
+```
+
+### TLC Termination
+
+Настроим наш ингресс на прием только HTTPS трафика и терминацию его на границе кластетра (т.е. мы будем принимать только шифрованные соединения из вне по HTTPS, а внутри кластера по прежнему будет HTTP).
+
+Создадим сертификат для с использованием ip как CN
+
+```shell
+# get ingress ip
+kubectl get ingress -n dev
+# generate cert
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=<Ingress_ip>"
+```
+
+Создадим объект типа secret для хранения сертификата в кластере
+
+```shell
+kubectl create secret tls ui-ingress --key tls.key --cert tls.crt -n dev
+# view secret
+kubectl describe secret ui-ingress -n dev
+```
+
+Теперь настроим ингресс на прием только https трафика.
+
+```yaml
+...
+metadata:
+  name: ui
+  annotations:
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  tls:
+  - secretName: ui-ingress
+...
+```
+
+Применим изменения и проверим в GCP что у нас используется только протокол HTTPS. Если это не так, то пересоздадим правила вручную:
+
+```shell
+kubectl delete ingress ui -n dev
+kubectl apply -f reddit/ui-ingress.yml -n dev
+```
+
+### Описать объект secret в виде кубернетес-манифеста (*)
+В предыдущей главе мы создали объект типа Secret через kubectl. Опишем его в виде манифеста кубернетес. Файл назовем ui-secret-ingress.yml.
 
 ----
 ## Homework 20 (kubernetes-2)
