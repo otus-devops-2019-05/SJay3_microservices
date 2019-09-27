@@ -12,6 +12,8 @@ SJay3 microservices repository
 - Использование объекта Ingress
 - TLC Termination
 - Описать объект secret в виде кубернетес-манифеста (*)
+- Использование NetworkPolicy
+- Хранилище для базы
 
 ### Настройка сервиса типа LoadBalancer
 В прошлой дз мы установили у ui сервиса тип NodePort, который позволил нам по ip-адресу ноды и порту указанному в NodePort подключаться из вне к нашему сервису ui. Это не очень удобно. Поэтому с помощью типа сервиса LoadBalancer (этот тип доступен только в облачных провайдерах) мы настроим облачных балансировщик как единую точку входа для нашего сервиса ui.
@@ -149,7 +151,6 @@ type: kubernetes.io/tls
 data:
   tls.crt: <base64_cert>
   tls.key: <base64_key>
-
 ```
 
 Сертификат и ключ должны быть в base64:
@@ -158,6 +159,61 @@ data:
 cat tls.key | base64
 cat tls.crt | base64
 ```
+
+### Использование NetworkPolicy
+
+Для того, что бы разнести сервисы базы данных и фронтенда по разным сетям мы будем использовать NetworkPolicy, т.к. в кубернетесе по умолчанию все поды могут достучаться друг до друга.
+
+NetworkPolicy - это инструмент для декларативного описания потоков трафика. Не все сетевые плагины его поддерживают. В GKE мы включим сетевой плагин Calico, вместо Kubenet, для того, что бы использовать NetworkPolicy.
+
+#### Включениек плагина Calico
+Найдем имя кластера:
+
+```shell
+gcloud beta container clusters list
+```
+
+Включим network-policy:
+
+```shell
+gcloud beta container clusters update <cluster_name> \
+  --zone=<zone_name> --update-addons=NetworkPolicy=ENABLED
+gcloud beta container clusters update <cluster_name> \
+  --zone=<zone_name> --enable-network-policy
+```
+
+#### Политика для монги
+
+Создадим NetworkPolicy для бд монги. Файл mongo-network-policy.yml.
+
+В разделе podSelector выбираем объекты к которым применяется политика.
+
+В разделе policyTypes описываем запрещающие направления. Запретим все входящие подключения, но разрешим исходящие:
+
+```yaml
+...
+policyTypes:
+- Ingress
+...
+```
+
+Далее идет раздел разрешающих правил. Разрешим все входящие подключения для сервисов post и comment.
+
+```yaml
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: reddit
+        matchExpressions:
+        - key: component
+          operator: In
+          values:
+          - comment
+          - post
+```
+
+### Хранилище для базы
 
 
 ----
