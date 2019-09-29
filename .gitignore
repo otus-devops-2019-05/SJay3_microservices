@@ -22,3 +22,4 @@ monitoring/exporters/mongodb-exporter/
 gcp-stackdriver-docker-key.json
 build_info.txt
 
+kubernetes/tls.key

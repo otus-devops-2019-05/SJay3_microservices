@@ -5,6 +5,259 @@ SJay3 microservices repository
 
 [Докер-хаб](https://hub.docker.com/u/sjotus)
 
+
+## Homework 21 (kubernetes-3)
+В данном домашнем задании было сделано:
+- Настройка сервиса типа LoadBalancer
+- Использование объекта Ingress
+- TLC Termination
+- Описать объект secret в виде кубернетес-манифеста (*)
+- Использование NetworkPolicy
+- Хранилище для базы
+
+### Настройка сервиса типа LoadBalancer
+В прошлой дз мы установили у ui сервиса тип NodePort, который позволил нам по ip-адресу ноды и порту указанному в NodePort подключаться из вне к нашему сервису ui. Это не очень удобно. Поэтому с помощью типа сервиса LoadBalancer (этот тип доступен только в облачных провайдерах) мы настроим облачных балансировщик как единую точку входа для нашего сервиса ui.
+
+Для этого в ui-service.yml изменим тип с NodePort на LoadBalancer + внесем еще несколько правок.
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+  labels:
+    app: reddit
+    component: ui
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    nodePort: 32092
+    protocol: TCP
+    targetPort: 9292
+  selector:
+    app: reddit
+    component: ui
+```
+
+Проверим, что мы все указали правильно:
+
+```shell
+# apply changes
+kubectl apply -f reddit/ui-service.yml -n dev
+
+# get external-ip of service
+kubectl get service -n dev --selector component=ui
+```
+
+Балансировка через service с типом LoadBalancer имеет следующие недостатки:
+
+- нельзя управлять с помощью http URI (L7-балансировка)
+- используются только облачные балансировщики (AWS,GCP)
+- нет гибких правил работы с трафиком
+
+### Использование объекта Ingress
+
+Для более удобного управления и решения недостатков LoadBalancer можно использовать Ingress
+
+Ingress - это набор правил внутри кластера кубернетес, предназначенных для того, что бы входящиие подключения могли достич объектов Service. Для применения правил Ingress необходим Ingress Controller.
+
+Ingress Controller - это под, который состоит из 2-х функциональных частей:
+
+- Приложение, которое отслеживает через API кубера новые объекты Ingress и обновляет конфигурацию балансировщика
+- Балансировщик (nginx, haproxy, traefik ...), который управляет сетевым трафиком
+
+В GKE есть возможность использовать их собственные решения балансировщика в качестве Ingress Controller.
+
+Убедимся, что в настройках кластера в консоли GCP включен балансировщик (addons -> HTTP load balancing -> enabled).
+
+Теперь создадим ингресс для сервиса ui. Файл назовем ui-ingress.yml
+
+После применения конфигурации, в GCP Появится еще один балансировщик (на 7-м уровне). Посмотрим адрес ui-сервиса:
+
+```shell
+kubectl get ingress -n dev
+```
+
+Вернем обратно сервису ui тип NodePort, а в ингрессе пропишем правила балансировки:
+
+```yaml
+...
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: ui
+          servicePort: 9292
+```
+
+### TLC Termination
+
+Настроим наш ингресс на прием только HTTPS трафика и терминацию его на границе кластетра (т.е. мы будем принимать только шифрованные соединения из вне по HTTPS, а внутри кластера по прежнему будет HTTP).
+
+Создадим сертификат для с использованием ip как CN
+
+```shell
+# get ingress ip
+kubectl get ingress -n dev
+# generate cert
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=<Ingress_ip>"
+```
+
+Создадим объект типа secret для хранения сертификата в кластере
+
+```shell
+kubectl create secret tls ui-ingress --key tls.key --cert tls.crt -n dev
+# view secret
+kubectl describe secret ui-ingress -n dev
+```
+
+Теперь настроим ингресс на прием только https трафика.
+
+```yaml
+...
+metadata:
+  name: ui
+  annotations:
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  tls:
+  - secretName: ui-ingress
+...
+```
+
+Применим изменения и проверим в GCP что у нас используется только протокол HTTPS. Если это не так, то пересоздадим правила вручную:
+
+```shell
+kubectl delete ingress ui -n dev
+kubectl apply -f reddit/ui-ingress.yml -n dev
+```
+
+### Описать объект secret в виде кубернетес-манифеста (*)
+В предыдущей главе мы создали объект типа Secret через kubectl. Опишем его в виде манифеста кубернетес. Файл назовем ui-secret-ingress.yml.
+
+Структура файла должна быть следующей:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ui-ingress
+type: kubernetes.io/tls
+data:
+  tls.crt: <base64_cert>
+  tls.key: <base64_key>
+```
+
+Сертификат и ключ должны быть в base64:
+
+```shell
+cat tls.key | base64
+cat tls.crt | base64
+```
+
+### Использование NetworkPolicy
+
+Для того, что бы разнести сервисы базы данных и фронтенда по разным сетям мы будем использовать NetworkPolicy, т.к. в кубернетесе по умолчанию все поды могут достучаться друг до друга.
+
+NetworkPolicy - это инструмент для декларативного описания потоков трафика. Не все сетевые плагины его поддерживают. В GKE мы включим сетевой плагин Calico, вместо Kubenet, для того, что бы использовать NetworkPolicy.
+
+#### Включениек плагина Calico
+Найдем имя кластера:
+
+```shell
+gcloud beta container clusters list
+```
+
+Включим network-policy:
+
+```shell
+gcloud beta container clusters update <cluster_name> \
+  --zone=<zone_name> --update-addons=NetworkPolicy=ENABLED
+gcloud beta container clusters update <cluster_name> \
+  --zone=<zone_name> --enable-network-policy
+```
+
+#### Политика для монги
+
+Создадим NetworkPolicy для бд монги. Файл mongo-network-policy.yml.
+
+В разделе podSelector выбираем объекты к которым применяется политика.
+
+В разделе policyTypes описываем запрещающие направления. Запретим все входящие подключения, но разрешим исходящие:
+
+```yaml
+...
+policyTypes:
+- Ingress
+...
+```
+
+Далее идет раздел разрешающих правил. Разрешим все входящие подключения для сервисов post и comment.
+
+```yaml
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: reddit
+        matchExpressions:
+        - key: component
+          operator: In
+          values:
+          - comment
+          - post
+```
+
+### Хранилище для базы
+
+Сейчас для монги используется тип Volume emptyDir. При создании пода с таким типом, создается пустой докер вольюм, а при остановке пода - вольюм удалится навсегда. Вместо него, будем использовать gcePersistentDisk.
+
+Создадим диск на Google Cloud:
+
+```shell
+gcloud compute disks create --size=25GB --zone=us-west1-c reddit-mongo-disk
+```
+
+Изменим mongo-deployment.yml удалив emptyDir и добавив gcePersistantDisk
+
+```yaml
+  volumes:
+      - name: mongo-gce-pd-storage
+        gcePersistentDisk:
+          pdName: reddit-mongo-disk
+          fsType: ext4
+```
+
+Для более удобного управления вольюмами мы можем использовать не отдельный диск для каждого пода, а отдельный ресурс хранилища, общий для всего кластера - PersistentVolume.
+
+Создадим файл mongo-volume.yml с описанием PersistentVolume.
+
+Так же создадим запрос на выдачу созданного нами ресурса - PersistentVolumeClaim (PVC). Файл mongo-claim.yml.
+
+Подключим PVC к поду с монгой
+
+```yaml
+...
+volumes:
+      - name: mongo-gce-pd-storage
+        persistentVolumeClaim:
+          claimName: mongo-pvc
+```
+
+Для того, что бы создавать хранилища в автоматическом режиме и динамически выделять вольюмы, необходимо использовать StorageClass. Они описывают где и какие хранилища создаются.
+
+Опишем StorageClass Fast что бы монтировались SSD диски для работы нашего хранилища. Файл storage-fast.yml.
+
+Создадим новый клайм на запрос быстрых дисков - mongo-claim-dynamyc.yml.
+
+Так же изменим в в деплойменте монги запрос с обычных дисков на ссд.
+
+----
 ## Homework 20 (kubernetes-2)
 В данном домашнем задании было сделано:
 - Развернуть kubernetes в локальном окружении
@@ -984,7 +1237,7 @@ Trickster - это кэширующий прокси от компании Comca
 
 
 ----
-## Homewokr 16 (monitoring-1)
+## Homework 16 (monitoring-1)
 В данном домашнем задании было сделано:
 - Запуск prometheus в контейнере
 - Упорядочивание репозитория
