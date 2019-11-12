@@ -5,7 +5,11 @@ SJay3 microservices repository
 
 [Докер-хаб](https://hub.docker.com/u/sjotus)
 
+## Homework 22 (kubernetes-4)
+В данном домашнем задании было сделано:
 
+
+----
 ## Homework 21 (kubernetes-3)
 В данном домашнем задании было сделано:
 - Настройка сервиса типа LoadBalancer
