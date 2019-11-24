@@ -5,3 +5,7 @@ service:
 image:
   repository: sjotus/ui
   tag: latest
+postHost:
+postPort:
+commentHost:
+commentPort:
