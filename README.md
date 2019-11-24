@@ -132,6 +132,9 @@ helm upgrade test-ui-2 ui/
 helm upgrate test-ui-3 ui/
 ```
 
+Шаблонизируем остальные сервисы post и comment
+
+
 ----
 ## Homework 21 (kubernetes-3)
 В данном домашнем задании было сделано:
