@@ -290,7 +290,23 @@ kubectl get service -n nginx-ingress nginx
 
 #### Подготовка
 
-Создадим public группу с именем своего dockerID. В настройках группы в CI/CD создадим 2 переменные `CI_REGISTRY_USER` и `CI_REGISTRY_PASSWORD` с логином и паролем от докер хаба. Создадим публичные проекты reddit-deploy, comment, ui, post
+Создадим public группу с именем своего dockerID. В настройках группы в CI/CD создадим 2 переменные `CI_REGISTRY_USER` и `CI_REGISTRY_PASSWORD` с логином и паролем от докер хаба. Создадим публичные проекты reddit-deploy, comment, ui, post.
+
+Локально создадим папку kubernetes/gitlab-ci предварительно добавив её в gitignore. Внутри создадим директории comment, post, ui, reddit-deploy. 
+
+В директории comment, post и ui перенесем исходные папки сервисов из src/comment, src/post и src/ui. Инициализируем репозиторий и запушим все в соответствующие репы развернутого в кубернетесе гитлаба.
+
+```shell
+# for ui
+git init
+git remote add origin http://gitlab-gitlab/sjotus/ui.git
+
+git add .
+git commit -m "init"
+git push origin master
+```
+
+В директорию reddit-deploy перенесем папки ui, post, comment и reddit из директории Charts и аналогично запушим её.
 
 ----
 ## Homework 21 (kubernetes-3)
