@@ -7,7 +7,130 @@ SJay3 microservices repository
 
 ## Homework 22 (kubernetes-4)
 В данном домашнем задании было сделано:
+- Работа с Helm
 
+### Работа с helm
+Helm - это пакетный менеджер для кубернетеса
+
+#### Установка helm
+Установим клиентскую часть helm. Будем устанавливать версию 2.13.1. Для этого перейдем по [ссылке](https://github.com/helm/helm/releases) и загрузим бинарник, соответствующей нашей ОС. Для установки на Linux (или WSL), необходимо скачать архив, распаковать его и разместить исполняемый файл `helm` в `/usr/local/bin` или `/usr/bin`.
+Хельм читает `~/.kube/config` и сам определяет текущий контекст. Можно так же указать свой конфигу-файл указывая ключ `--kube-context`.
+
+Теперь установим серверную часть helm - tiller. Tiller - это под, который общается с АПИ кубернетеса. Для работы, ему необходимо создать сервисный аккаунт и выдать роли RBAC.
+
+В корне директории kubernetes создадим файл tiller.yml следующего содержания:
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tiller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tiller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: tiller
+    namespace: kube-system
+```
+
+Применим этот манифест:
+
+```shell
+kubectl apply -f tiller.yml
+```
+
+
+После чего запустим tiller-сервер командой:
+
+```shell
+helm init --service-account tiller
+```
+
+Проверим, что под запустился и работает:
+
+```shell
+kubectl get pods -n kube-system --selector app=helm
+```
+
+#### Charts
+Chart - это пакет хельма.
+Создадим собственные чарты для микросервисного приложения. Для этого, в директории kubernetes, создадим директорию Charts, в которой создадим папки comment, post, reddit, ui.
+
+Начнем разработку чарта с компонента ui. В директории ui создадим файл Chart.yaml. Для хельма важны расширения файлов, поэтому он обязательно должен заканчиваться на `.yaml`
+
+```yaml
+name: ui
+version: 1.0.0
+description: OTUS reddit application UI
+maintainers:
+  - name: Someone
+    email: my@mail.com
+appVersion: 1.0
+```
+
+
+Поля `name` и `version` - самые значимые. От них зависит работа хельма. Остальные поля - это описание.
+Создадим шаблоны манифестов для ui. Создадим папку templates и перенесем в нее все ранее созданные манифесты, что бы в дальнейшем их шаблонизировать.
+
+У нас получился уже готовый, но пока не шаблонизированный пакет для хельма. Перед шаблонизацией, для проверки установим этот чарт:
+
+```shell
+helm install --name test-ui-1 ui/
+```
+
+Проверим, что произошло командой:
+
+```shell
+helm ls
+```
+
+Шаблонизируем файл templates/service.yaml так, что бы можно было использовать чарт для запуска нескольких экземпляров (релизов).
+
+При шаблонизации можно использовать встроенные переменные:
+- .Release - группа переменных с информацией о релизе
+(конкретном запуске Chart’а в k8s)
+- .Chart - группа переменных с информацией о Chart’е (содержимое
+файла Chart.yaml)
+Также еще есть группы переменных:
+- .Template - информация о текущем шаблоне ( .Name и .BasePath)
+- .Capabilities - информация о Kubernetes (версия, версии API)
+- .Files.Get - получить содержимое файла
+
+Шаблонизируем похожим образом все остальные файлы.
+
+Для шаблонизации можно использовать не только встроенные переменне, но и определять свои. Определим следующие переменные:
+- .Values.image.repository
+- .Values.image.tag
+- .Values.service.internalPort
+- .Values.service.externalPort
+
+Для того, что бы мы могли использовать эти переменные, определим их значения в файле ui/values.yaml
+
+```yaml
+service:
+  internalPort: 9292
+  externalPort: 9292
+image:
+  repository: sjotus/ui
+  tag: latest
+```
+
+После шаблонизации обновим наш ui-сервис через helm:
+
+```shell
+helm upgrade test-ui-1 ui/
+helm upgrade test-ui-2 ui/
+helm upgrate test-ui-3 ui/
+```
 
 ----
 ## Homework 21 (kubernetes-3)
