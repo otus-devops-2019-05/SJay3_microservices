@@ -264,6 +264,33 @@ legoEmail: you@example.com
 ```
 
 Исправим файлы `templates/gitlab/gitlab-svc.yaml`, `templates/gitlab-config.yaml`, `templates/ingress/gitlab-ingress.yamls`
+- https://raw.githubusercontent.com/express42/otus-snippets/master/kubernetes-4/gitlab/svc.yml
+- https://raw.githubusercontent.com/express42/otus-snippets/master/kubernetes-4/gitlab/config.yml
+- https://raw.githubusercontent.com/express42/otus-snippets/master/kubernetes-4/gitlab/ingress.yml
+
+Установим гитлаб:
+
+```shell
+helm install --name gitlab . -f values.yaml
+# helm3
+helm3 install gitlab . -f values.yaml
+```
+
+Найдем выделенный адрес ингресс-контроллера nginx
+
+```shell
+kubectl get service -n nginx-ingress nginx
+```
+
+Для обращения к гитлабу на доменному имени, внесем в файл hosts запись:
+
+```
+<nginx_ingress_ip> gitlab-gitlab staging production
+```
+
+#### Подготовка
+
+Создадим public группу с именем своего dockerID. В настройках группы в CI/CD создадим 2 переменные `CI_REGISTRY_USER` и `CI_REGISTRY_PASSWORD` с логином и паролем от докер хаба. Создадим публичные проекты reddit-deploy, comment, ui, post
 
 ----
 ## Homework 21 (kubernetes-3)
