@@ -246,7 +246,24 @@ kubectl get ingress -n new-helm
 
 
 ### Развертывание Gitlab в kubernetes
+#### Установка
 
+```shell
+# Добавим репозиторий в хельм
+helm repo add gitlab https://charts.gitlab.io
+# Скачаем чарт и распакуем его
+helm fetch gitlab/gitlab-omnibus --version 0.1.37 --untar
+cd gitlab-omnibus
+```
+
+Исправим values.yaml
+
+```yaml
+baseDomain: example.com
+legoEmail: you@example.com
+```
+
+Исправим файлы `templates/gitlab/gitlab-svc.yaml`, `templates/gitlab-config.yaml`, `templates/ingress/gitlab-ingress.yamls`
 
 ----
 ## Homework 21 (kubernetes-3)
