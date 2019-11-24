@@ -8,6 +8,7 @@ SJay3 microservices repository
 ## Homework 22 (kubernetes-4)
 В данном домашнем задании было сделано:
 - Работа с Helm
+- Развертывание Gitlab в kubernetes
 
 ### Работа с helm
 Helm - это пакетный менеджер для кубернетеса
@@ -206,6 +207,46 @@ helm search mongo
 ```shell
 helm install reddit --name reddit-test
 ```
+
+#### tiller plugin
+В начале мы деплоили тиллер с правами cluster-admin. Это не безопасно. Есть концепция создавать тиллер в каждом неймспейсе, наделяя его соответствующими правами. Для того, что бы не делать этого каждый раз руками, будем использовать [tiller plugin](https://github.com/rimusz/helm-tiller). [Описание](https://rimusz.net/tillerless-helm).
+
+1. Сначала удалим уже использующийся тиллер: https://stackoverflow.com/questions/47583821/how-to-delete-tiller-from-kubernetes-cluster/47583918
+2. Выполним установку плагина и деплой в новый неймспейс reddit-ns
+
+```shell
+helm init --client-only
+helm plugin install https://github.com/rimusz/helm-tiller
+helm tiller run -- helm upgrade --install --wait --namespace=reddit-ns reddit reddit/
+```
+
+3. Проверим, что все получилось успешно, выполнив команду `kubectl get ingress -n reddit-ns` и пройдя по ip в ингрессе
+
+#### Helm3
+
+Установим Helm3, аналочино, как и устанавливали 2-ю версию.
+
+Создадим новый неймспейс что бы протестировать новую версию хельма
+
+```shell
+kubectl create ns new-helm
+```
+
+Задеплоимся:
+
+```shell
+helm3 upgrade --install --namespace=new-helm --wait reddit-release reddit/
+```
+
+И проверяем:
+
+```shell
+kubectl get ingress -n new-helm
+```
+
+
+### Развертывание Gitlab в kubernetes
+
 
 ----
 ## Homework 21 (kubernetes-3)
