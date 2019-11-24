@@ -9,6 +9,7 @@ SJay3 microservices repository
 В данном домашнем задании было сделано:
 - Работа с Helm
 - Развертывание Gitlab в kubernetes
+- CI/CD конвеер
 
 ### Работа с helm
 Helm - это пакетный менеджер для кубернетеса
@@ -307,6 +308,9 @@ git push origin master
 ```
 
 В директорию reddit-deploy перенесем папки ui, post, comment и reddit из директории Charts и аналогично запушим её.
+
+### CI/CD конвеер
+
 
 ----
 ## Homework 21 (kubernetes-3)
