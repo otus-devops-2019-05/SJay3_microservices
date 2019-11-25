@@ -310,7 +310,60 @@ git push origin master
 В директорию reddit-deploy перенесем папки ui, post, comment и reddit из директории Charts и аналогично запушим её.
 
 ### CI/CD конвеер
+Создадим файлы `.gitlab-ci.yml` для сервисов post, comment и ui. Убедимся, что сборка происходит успешно.
 
+Добавим возможность разработчику запускать отдельное окружение в кубернетесе по коммиту в feature-branch. Для этого обновим шаблон ингресса сервиса ui в папке reddit-deploy:
+
+```yaml
+...
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+spec:
+  rules:
+  - host: {{ .Values.ingress.host | default .Release.Name }}
+...
+```
+
+И обновим файл values.yaml:
+
+```yaml
+...
+ingress:
+  class: nginx
+```
+
+Создадим новую ветку в локальном репозитории ui
+
+```shell
+git checkout -b feature/3
+```
+
+И отредактируем файл .gitlab-ci.yml так, что бы можно было запускать окружение с веток feature.
+
+```yaml
+review:
+  stage: review
+  script:
+    - install_dependencies
+    - ensure_namespace
+    - install_tiller
+    - deploy
+  variables:
+    KUBE_NAMESPACE: review
+    host: $CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG
+  environment:
+    name: review/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME
+    url: http://$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG
+    on_stop: stop_review
+  only:
+    refs:
+      - branches
+    kubernetes: active
+  except:
+    - master
+````
+
+Добавим так же ручное удаление окружения и скопируем изменения для сервисов post и comment
 
 ----
 ## Homework 21 (kubernetes-3)
