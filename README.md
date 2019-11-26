@@ -365,6 +365,11 @@ review:
 
 Добавим так же ручное удаление окружения и скопируем изменения для сервисов post и comment
 
+Для деплоя в stage и prod, отдельно создадим файл .gitlab-ci.yml в директории reddit-deploy.
+
+Сделаем рефакторинг файлов .gitlab-ci.yml в наших сервисах, убрав секию auto_devops ([пример](https://raw.githubusercontent.com/express42/otus-snippets/master/kubernetes-4/ui/new-ci-pipeline.yml))
+
+
 ----
 ## Homework 21 (kubernetes-3)
 В данном домашнем задании было сделано:
