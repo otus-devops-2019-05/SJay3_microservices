@@ -98,7 +98,6 @@ review:
   variables:
     KUBE_NAMESPACE: review
     host: $CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG
-    TILLER_NAMESPACE: kube-system
     CI_APPLICATION_TAG: $CI_COMMIT_REF_SLUG
   before_script:
     # install dependencies
@@ -137,16 +136,8 @@ review:
         || kubectl create namespace "$KUBE_NAMESPACE"
     # installing tiller
     - echo "Checking Tiller..."
-    - helm init --upgrade
-    - >
-      kubectl rollout status -n "$TILLER_NAMESPACE" \
-        -w "deployment/tiller-deploy"
-    - >
-      if ! helm version --debug; then
-        echo "Failed to init Tiller."
-        return 1
-      fi
-    - echo ""
+    - helm init --client-only
+    - helm plugin install https://github.com/rimusz/helm-tiller
   script:
     - export track="${1-stable}"
     - >
@@ -159,14 +150,15 @@ review:
     - helm dep update reddit-deploy/reddit
     - echo "Deploy helm release $name to $KUBE_NAMESPACE"
     - >
-      helm upgrade --install \
-        --wait \
-        --set ui.ingress.host="$host" \
-        --set $CI_PROJECT_NAME.image.tag=$CI_APPLICATION_TAG \
-        --namespace="$KUBE_NAMESPACE" \
-        --version="$CI_PIPELINE_ID-$CI_JOB_ID" \
-        "$name" \
-        reddit-deploy/reddit/
+      helm tiller run -- \
+        helm upgrade --install \
+          --wait \
+          --set ui.ingress.host="$host" \
+          --set $CI_PROJECT_NAME.image.tag=$CI_APPLICATION_TAG \
+          --namespace="$KUBE_NAMESPACE" \
+          --version="$CI_PIPELINE_ID-$CI_JOB_ID" \
+          "$name" \
+          reddit-deploy/reddit/
 
 stop_review:
   stage: cleanup
