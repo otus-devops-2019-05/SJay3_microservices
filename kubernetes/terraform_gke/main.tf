@@ -27,8 +27,8 @@ resource "google_container_cluster" "cluster" {
   # temporary nodes
   node_config {
     machine_type = "g1-small"
-    disk_size_gb = "10"
-    preemptible = "true"
+    disk_size_gb = "20"
+    preemptible = "false"
   }
 
   master_auth {

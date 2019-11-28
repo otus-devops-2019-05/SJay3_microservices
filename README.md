@@ -5,7 +5,372 @@ SJay3 microservices repository
 
 [Докер-хаб](https://hub.docker.com/u/sjotus)
 
+## Homework 22 (kubernetes-4)
+В данном домашнем задании было сделано:
+- Работа с Helm
+- Развертывание Gitlab в kubernetes
+- CI/CD конвеер
 
+### Работа с helm
+Helm - это пакетный менеджер для кубернетеса
+
+#### Установка helm
+Установим клиентскую часть helm. Будем устанавливать версию 2.13.1. Для этого перейдем по [ссылке](https://github.com/helm/helm/releases) и загрузим бинарник, соответствующей нашей ОС. Для установки на Linux (или WSL), необходимо скачать архив, распаковать его и разместить исполняемый файл `helm` в `/usr/local/bin` или `/usr/bin`.
+Хельм читает `~/.kube/config` и сам определяет текущий контекст. Можно так же указать свой конфигу-файл указывая ключ `--kube-context`.
+
+Теперь установим серверную часть helm - tiller. Tiller - это под, который общается с АПИ кубернетеса. Для работы, ему необходимо создать сервисный аккаунт и выдать роли RBAC.
+
+В корне директории kubernetes создадим файл tiller.yml следующего содержания:
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tiller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tiller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: tiller
+    namespace: kube-system
+```
+
+Применим этот манифест:
+
+```shell
+kubectl apply -f tiller.yml
+```
+
+
+После чего запустим tiller-сервер командой:
+
+```shell
+helm init --service-account tiller
+```
+
+Проверим, что под запустился и работает:
+
+```shell
+kubectl get pods -n kube-system --selector app=helm
+```
+
+#### Charts
+Chart - это пакет хельма.
+Создадим собственные чарты для микросервисного приложения. Для этого, в директории kubernetes, создадим директорию Charts, в которой создадим папки comment, post, reddit, ui.
+
+Начнем разработку чарта с компонента ui. В директории ui создадим файл Chart.yaml. Для хельма важны расширения файлов, поэтому он обязательно должен заканчиваться на `.yaml`
+
+```yaml
+name: ui
+version: 1.0.0
+description: OTUS reddit application UI
+maintainers:
+  - name: Someone
+    email: my@mail.com
+appVersion: 1.0
+```
+
+
+Поля `name` и `version` - самые значимые. От них зависит работа хельма. Остальные поля - это описание.
+Создадим шаблоны манифестов для ui. Создадим папку templates и перенесем в нее все ранее созданные манифесты, что бы в дальнейшем их шаблонизировать.
+
+У нас получился уже готовый, но пока не шаблонизированный пакет для хельма. Перед шаблонизацией, для проверки установим этот чарт:
+
+```shell
+helm install --name test-ui-1 ui/
+```
+
+Проверим, что произошло командой:
+
+```shell
+helm ls
+```
+
+Шаблонизируем файл templates/service.yaml так, что бы можно было использовать чарт для запуска нескольких экземпляров (релизов).
+
+При шаблонизации можно использовать встроенные переменные:
+- .Release - группа переменных с информацией о релизе
+(конкретном запуске Chart’а в k8s)
+- .Chart - группа переменных с информацией о Chart’е (содержимое
+файла Chart.yaml)
+Также еще есть группы переменных:
+- .Template - информация о текущем шаблоне ( .Name и .BasePath)
+- .Capabilities - информация о Kubernetes (версия, версии API)
+- .Files.Get - получить содержимое файла
+
+Шаблонизируем похожим образом все остальные файлы.
+
+Для шаблонизации можно использовать не только встроенные переменне, но и определять свои. Определим следующие переменные:
+- .Values.image.repository
+- .Values.image.tag
+- .Values.service.internalPort
+- .Values.service.externalPort
+
+Для того, что бы мы могли использовать эти переменные, определим их значения в файле ui/values.yaml
+
+```yaml
+service:
+  internalPort: 9292
+  externalPort: 9292
+image:
+  repository: sjotus/ui
+  tag: latest
+```
+
+После шаблонизации обновим наш ui-сервис через helm:
+
+```shell
+helm upgrade test-ui-1 ui/
+helm upgrade test-ui-2 ui/
+helm upgrate test-ui-3 ui/
+```
+
+Шаблонизируем остальные сервисы post и comment
+
+В хельме существует функционал хелперов. Helper - это написанная пользователем функция, в которой как правило реализована сложная логика. Эти функции располагаются в `templates/_helpers.tpl`.
+
+Напишем свою функцию для чарта comment:
+
+```
+{{- define "comment.fullname" -}}
+{{- printf "%s-%s" .Release.Name .Chart.Name }}
+{{- end -}}
+```
+
+Эта функция в результате выдаст тоже что и конструкция вида `{{ .Release.Name }}-{{ .Chart.Name }}`
+
+Для использования хелперов, необхоимо указывать конструкцию вида `{{ template "comment.fullname" . }}`. Изменим шаблоны comment на использование нашего хелпера.
+
+Конструкция вызова функций хелпера состоит из:
+- ключевое слово template - это вызов функции template
+- имя определенной в хелпере функции для импорта
+- "." - это область видимости для импорта. "." - область видимости всех переменных.
+
+Аналогичным образом создадим хелперы для 2-х других сервисов.
+
+#### Управление зависимостями
+На данном этапе у нас есть чарты для всех компонентов нашего приложения. Мы можем запускать их по отдельности, но они будут запускаться в разных релизах и не будут видеть друг друга. Для того, что бы этого не происходило, с помощью механизма управления зависимостями созадим единый чарт reddit, который будет объединять все наши компоненты.
+
+В директории reddit создадим файл requirements.yaml
+
+```yaml
+---
+dependencies:
+  - name: ui
+    version: "1.0.0"
+    repository: "file://../ui"
+
+  - name: post
+    version: "1.0.0"
+    repository: "file://../post"
+
+  - name: comment
+    version: "1.0.0"
+    repository: "file://../comment"
+```
+
+Теперь загрузим все зависимости, т.к. наши чарты не упакованы в tgz-архив
+
+```shell
+cd Charts/reddit
+helm dep update
+```
+
+Появится файл requirements.lock с фиксацией зависимостей. Будет создана директория charts с зависимостями в виде архивов.
+
+Чарт для базы данных не будем создавать, а возьмем готовый.
+
+```shell
+# Найдем чарт в доступном репозитории
+helm search mongo
+```
+
+Добавим в файл с зависимостями найденый нами чарт и обновим их
+
+```yaml
+...
+  - name: mongodb
+    version: 7.2.8
+    repository: https://kubernetes-charts.storage.googleapis.com
+```
+
+Теперь установим наше приложение:
+
+```shell
+helm install reddit --name reddit-test
+```
+
+#### tiller plugin
+В начале мы деплоили тиллер с правами cluster-admin. Это не безопасно. Есть концепция создавать тиллер в каждом неймспейсе, наделяя его соответствующими правами. Для того, что бы не делать этого каждый раз руками, будем использовать [tiller plugin](https://github.com/rimusz/helm-tiller). [Описание](https://rimusz.net/tillerless-helm).
+
+1. Сначала удалим уже использующийся тиллер: https://stackoverflow.com/questions/47583821/how-to-delete-tiller-from-kubernetes-cluster/47583918
+2. Выполним установку плагина и деплой в новый неймспейс reddit-ns
+
+```shell
+helm init --client-only
+helm plugin install https://github.com/rimusz/helm-tiller
+helm tiller run -- helm upgrade --install --wait --namespace=reddit-ns reddit reddit/
+```
+
+3. Проверим, что все получилось успешно, выполнив команду `kubectl get ingress -n reddit-ns` и пройдя по ip в ингрессе
+
+#### Helm3
+
+Установим Helm3, аналочино, как и устанавливали 2-ю версию.
+
+Создадим новый неймспейс что бы протестировать новую версию хельма
+
+```shell
+kubectl create ns new-helm
+```
+
+Задеплоимся:
+
+```shell
+helm3 upgrade --install --namespace=new-helm --wait reddit-release reddit/
+```
+
+И проверяем:
+
+```shell
+kubectl get ingress -n new-helm
+```
+
+
+### Развертывание Gitlab в kubernetes
+#### Установка
+
+```shell
+# Добавим репозиторий в хельм
+helm repo add gitlab https://charts.gitlab.io
+# Скачаем чарт и распакуем его
+helm fetch gitlab/gitlab-omnibus --version 0.1.37 --untar
+cd gitlab-omnibus
+```
+
+Исправим values.yaml
+
+```yaml
+baseDomain: example.com
+legoEmail: you@example.com
+```
+
+Исправим файлы `templates/gitlab/gitlab-svc.yaml`, `templates/gitlab-config.yaml`, `templates/ingress/gitlab-ingress.yamls`
+- https://raw.githubusercontent.com/express42/otus-snippets/master/kubernetes-4/gitlab/svc.yml
+- https://raw.githubusercontent.com/express42/otus-snippets/master/kubernetes-4/gitlab/config.yml
+- https://raw.githubusercontent.com/express42/otus-snippets/master/kubernetes-4/gitlab/ingress.yml
+
+Установим гитлаб:
+
+```shell
+helm install --name gitlab . -f values.yaml
+# helm3
+helm3 install gitlab . -f values.yaml
+```
+
+Найдем выделенный адрес ингресс-контроллера nginx
+
+```shell
+kubectl get service -n nginx-ingress nginx
+```
+
+Для обращения к гитлабу на доменному имени, внесем в файл hosts запись:
+
+```
+<nginx_ingress_ip> gitlab-gitlab staging production
+```
+
+#### Подготовка
+
+Создадим public группу с именем своего dockerID. В настройках группы в CI/CD создадим 2 переменные `CI_REGISTRY_USER` и `CI_REGISTRY_PASSWORD` с логином и паролем от докер хаба. Создадим публичные проекты reddit-deploy, comment, ui, post.
+
+Локально создадим папку kubernetes/gitlab-ci предварительно добавив её в gitignore. Внутри создадим директории comment, post, ui, reddit-deploy. 
+
+В директории comment, post и ui перенесем исходные папки сервисов из src/comment, src/post и src/ui. Инициализируем репозиторий и запушим все в соответствующие репы развернутого в кубернетесе гитлаба.
+
+```shell
+# for ui
+git init
+git remote add origin http://gitlab-gitlab/sjotus/ui.git
+
+git add .
+git commit -m "init"
+git push origin master
+```
+
+В директорию reddit-deploy перенесем папки ui, post, comment и reddit из директории Charts и аналогично запушим её.
+
+### CI/CD конвеер
+Создадим файлы `.gitlab-ci.yml` для сервисов post, comment и ui. Убедимся, что сборка происходит успешно.
+
+Добавим возможность разработчику запускать отдельное окружение в кубернетесе по коммиту в feature-branch. Для этого обновим шаблон ингресса сервиса ui в папке reddit-deploy:
+
+```yaml
+...
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+spec:
+  rules:
+  - host: {{ .Values.ingress.host | default .Release.Name }}
+...
+```
+
+И обновим файл values.yaml:
+
+```yaml
+...
+ingress:
+  class: nginx
+```
+
+Создадим новую ветку в локальном репозитории ui
+
+```shell
+git checkout -b feature/3
+```
+
+И отредактируем файл .gitlab-ci.yml так, что бы можно было запускать окружение с веток feature.
+
+```yaml
+review:
+  stage: review
+  script:
+    - install_dependencies
+    - ensure_namespace
+    - install_tiller
+    - deploy
+  variables:
+    KUBE_NAMESPACE: review
+    host: $CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG
+  environment:
+    name: review/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME
+    url: http://$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG
+    on_stop: stop_review
+  only:
+    refs:
+      - branches
+    kubernetes: active
+  except:
+    - master
+````
+
+Добавим так же ручное удаление окружения и скопируем изменения для сервисов post и comment
+
+Для деплоя в stage и prod, отдельно создадим файл .gitlab-ci.yml в директории reddit-deploy.
+
+Сделаем рефакторинг файлов .gitlab-ci.yml в наших сервисах, убрав секию auto_devops ([пример](https://raw.githubusercontent.com/express42/otus-snippets/master/kubernetes-4/ui/new-ci-pipeline.yml))
+
+
+----
 ## Homework 21 (kubernetes-3)
 В данном домашнем задании было сделано:
 - Настройка сервиса типа LoadBalancer
